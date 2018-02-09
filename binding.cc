@@ -7,88 +7,106 @@
 using namespace v8;
 using namespace Nan;
 
-class free_env_proxy {
-public:
+class free_env_proxy
+{
+  public:
     Nan::Persistent<v8::Object> persistent;
 };
 
-typedef struct {
+typedef struct
+{
     Nan::Callback *progress_callback;
     Nan::Callback *finished_callback;
 } transfer_callbacks_t;
 
-extern "C" void JsonLogger(const char *message, int level, void *handle) {
+extern "C" void JsonLogger(const char *message, int level, void *handle)
+{
     printf("{\"message\": \"%s\", \"level\": %i, \"timestamp\": %" PRIu64 "}\n",
            message, level, storj_util_timestamp());
 }
 
-Local<Value> IntToStorjError(int error_code) {
-    if (!error_code) {
+Local<Value> IntToStorjError(int error_code)
+{
+    if (!error_code)
+    {
         return Nan::Null();
     }
 
-    const char* error_msg = storj_strerror(error_code);
+    const char *error_msg = storj_strerror(error_code);
     v8::Local<v8::String> msg = Nan::New(error_msg).ToLocalChecked();
     v8::Local<v8::Value> error = Nan::Error(msg);
 
     return error;
 }
 
-Local<Value> IntToCurlError(int error_code) {
-    const char* error_msg = curl_easy_strerror((CURLcode)error_code);
+Local<Value> IntToCurlError(int error_code)
+{
+    const char *error_msg = curl_easy_strerror((CURLcode)error_code);
     v8::Local<v8::String> msg = Nan::New(error_msg).ToLocalChecked();
     return Nan::Error(msg);
 }
 
-Local<Value> IntToStatusError(int status_code) {
+Local<Value> IntToStatusError(int status_code)
+{
     Local<String> error_message;
-    switch(status_code) {
-        case 400:
-            error_message = Nan::New("Bad request").ToLocalChecked();
-            break;
-        case 401:
-            error_message = Nan::New("Not authorized").ToLocalChecked();
-            break;
-        case 404:
-            error_message = Nan::New("Resource not found").ToLocalChecked();
-            break;
-        case 420:
-            error_message = Nan::New("Transfer rate limit").ToLocalChecked();
-            break;
-        case 429:
-            error_message = Nan::New("Request rate limited").ToLocalChecked();
-            break;
-        case 500:
-            error_message = Nan::New("Internal error").ToLocalChecked();
-            break;
-        case 501:
-            error_message = Nan::New("Not implemented").ToLocalChecked();
-            break;
-        case 503:
-            error_message = Nan::New("Service unavailable").ToLocalChecked();
-            break;
-        default:
-            error_message = Nan::New("Unknown status error").ToLocalChecked();
+    switch (status_code)
+    {
+    case 400:
+        error_message = Nan::New("Bad request").ToLocalChecked();
+        break;
+    case 401:
+        error_message = Nan::New("Not authorized").ToLocalChecked();
+        break;
+    case 404:
+        error_message = Nan::New("Resource not found").ToLocalChecked();
+        break;
+    case 420:
+        error_message = Nan::New("Transfer rate limit").ToLocalChecked();
+        break;
+    case 429:
+        error_message = Nan::New("Request rate limited").ToLocalChecked();
+        break;
+    case 499:
+        error_message = Nan::New("No Payment Wallet").ToLocalChecked();
+        break;
+    case 500:
+        error_message = Nan::New("Internal error").ToLocalChecked();
+        break;
+    case 501:
+        error_message = Nan::New("Not implemented").ToLocalChecked();
+        break;
+    case 503:
+        error_message = Nan::New("Service unavailable").ToLocalChecked();
+        break;
+    default:
+        error_message = Nan::New("Unknown status error").ToLocalChecked();
     }
     Local<Value> error = Nan::Error(error_message);
     return error;
 }
 
 template <typename ReqType>
-bool error_and_status_check(ReqType *req, Local<Value> *error) {
-    if (req->error_code) {
+bool error_and_status_check(ReqType *req, Local<Value> *error)
+{
+    if (req->error_code)
+    {
         *error = IntToCurlError(req->error_code);
-    } else if (req->status_code > 399) {
+    }
+    else if (req->status_code > 399)
+    {
         *error = IntToStatusError(req->status_code);
-    } else {
+    }
+    else
+    {
         return true;
     }
 
     return false;
 }
 
-void Timestamp(const v8::FunctionCallbackInfo<Value>& args) {
-    Isolate* isolate = args.GetIsolate();
+void Timestamp(const v8::FunctionCallbackInfo<Value> &args)
+{
+    Isolate *isolate = args.GetIsolate();
 
     uint64_t timestamp = storj_util_timestamp();
     Local<Number> timestamp_local = Number::New(isolate, timestamp);
@@ -96,8 +114,9 @@ void Timestamp(const v8::FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(timestamp_local);
 }
 
-void MnemonicCheck(const v8::FunctionCallbackInfo<Value>& args) {
-    Isolate* isolate = args.GetIsolate();
+void MnemonicCheck(const v8::FunctionCallbackInfo<Value> &args)
+{
+    Isolate *isolate = args.GetIsolate();
 
     String::Utf8Value str(args[0]);
     const char *mnemonic = *str;
@@ -108,8 +127,9 @@ void MnemonicCheck(const v8::FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(mnemonic_check_result_local);
 }
 
-void MnemonicGenerate(const v8::FunctionCallbackInfo<Value>& args) {
-    Isolate* isolate = args.GetIsolate();
+void MnemonicGenerate(const v8::FunctionCallbackInfo<Value> &args)
+{
+    Isolate *isolate = args.GetIsolate();
 
     char *mnemonic_result = NULL;
     int32_t strength = Nan::To<int32_t>(args[0]).FromJust();
@@ -121,79 +141,87 @@ void MnemonicGenerate(const v8::FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(mnemonic_local);
 }
 
-void GetInfoCallback(uv_work_t *work_req, int status) {
+void GetInfoCallback(uv_work_t *work_req, int status)
+{
     Nan::HandleScope scope;
 
-    json_request_t *req = (json_request_t *) work_req->data;
+    json_request_t *req = (json_request_t *)work_req->data;
 
-    Nan::Callback *callback = (Nan::Callback*)req->handle;
+    Nan::Callback *callback = (Nan::Callback *)req->handle;
 
     v8::Local<v8::Value> error = Nan::Null();
     v8::Local<Value> result = Nan::Null();
 
-    if (error_and_status_check<json_request_t>(req, &error)) {
+    if (error_and_status_check<json_request_t>(req, &error))
+    {
         const char *result_str = json_object_to_json_string(req->response);
         v8::Local<v8::String> result_json_string = Nan::New(result_str).ToLocalChecked();
         Nan::JSON NanJSON;
         Nan::MaybeLocal<v8::Value> res = NanJSON.Parse(result_json_string);
-        if (!res.IsEmpty()) {
+        if (!res.IsEmpty())
+        {
             result = res.ToLocalChecked();
         }
     }
 
     Local<Value> argv[] = {
         error,
-        result
-    };
+        result};
 
     callback->Call(2, argv);
     free(req);
     free(work_req);
 }
 
-void GetInfo(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 1 || !args[0]->IsFunction()) {
+void GetInfo(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 1 || !args[0]->IsFunction())
+    {
         return Nan::ThrowError("First argument is expected to be a function");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
     Nan::Callback *callback = new Nan::Callback(args[0].As<Function>());
 
-    storj_bridge_get_info(env, (void *) callback, GetInfoCallback);
+    storj_bridge_get_info(env, (void *)callback, GetInfoCallback);
 }
 
-Local<Date> StrToDate(const char *dateStr) {
+Local<Date> StrToDate(const char *dateStr)
+{
     Local<Date> tmp = Nan::New<Date>(0).ToLocalChecked();
     v8::Local<v8::Function> cons = v8::Local<v8::Function>::Cast(
-        Nan::Get(tmp, Nan::New("constructor").ToLocalChecked()).ToLocalChecked()
-    );
+        Nan::Get(tmp, Nan::New("constructor").ToLocalChecked()).ToLocalChecked());
     const int argc = 1;
     v8::Local<v8::Value> argv[argc] = {Nan::New(dateStr).ToLocalChecked()};
     v8::Local<v8::Date> date = v8::Local<v8::Date>::Cast(
-        Nan::NewInstance(cons, argc, argv).ToLocalChecked()
-    );
+        Nan::NewInstance(cons, argc, argv).ToLocalChecked());
     return date;
 }
 
-void GetBucketsCallback(uv_work_t *work_req, int status) {
+void GetBucketsCallback(uv_work_t *work_req, int status)
+{
     Nan::HandleScope scope;
 
-    get_buckets_request_t *req = (get_buckets_request_t *) work_req->data;
+    get_buckets_request_t *req = (get_buckets_request_t *)work_req->data;
 
-    Nan::Callback *callback = (Nan::Callback*)req->handle;
+    Nan::Callback *callback = (Nan::Callback *)req->handle;
     Local<Value> buckets_value = Nan::Null();
     Local<Value> error = Nan::Null();
 
-    if (error_and_status_check<get_buckets_request_t>(req, &error)) {
+    if (error_and_status_check<get_buckets_request_t>(req, &error))
+    {
         Local<Array> buckets_array = Nan::New<Array>();
-        for (uint8_t i=0; i<req->total_buckets; i++) {
+        for (uint8_t i = 0; i < req->total_buckets; i++)
+        {
             Local<Object> bucket = Nan::New<Object>();
             bucket->Set(Nan::New("name").ToLocalChecked(), Nan::New(req->buckets[i].name).ToLocalChecked());
             bucket->Set(Nan::New("created").ToLocalChecked(), StrToDate(req->buckets[i].created));
@@ -206,43 +234,49 @@ void GetBucketsCallback(uv_work_t *work_req, int status) {
 
     Local<Value> argv[] = {
         error,
-        buckets_value
-    };
+        buckets_value};
     callback->Call(2, argv);
     free(req);
     free(work_req);
 }
 
-void GetBuckets(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 1 || !args[0]->IsFunction()) {
+void GetBuckets(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 1 || !args[0]->IsFunction())
+    {
         return Nan::ThrowError("First argument is expected to be a function");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
     Nan::Callback *callback = new Nan::Callback(args[0].As<Function>());
 
-    storj_bridge_get_buckets(env, (void *) callback, GetBucketsCallback);
+    storj_bridge_get_buckets(env, (void *)callback, GetBucketsCallback);
 }
 
-void ListFilesCallback(uv_work_t *work_req, int status) {
+void ListFilesCallback(uv_work_t *work_req, int status)
+{
     Nan::HandleScope scope;
 
-    list_files_request_t *req = (list_files_request_t *) work_req->data;
+    list_files_request_t *req = (list_files_request_t *)work_req->data;
 
-    Nan::Callback *callback = (Nan::Callback*)req->handle;
+    Nan::Callback *callback = (Nan::Callback *)req->handle;
     Local<Value> files_value = Nan::Null();
     Local<Value> error = Nan::Null();
 
-    if (error_and_status_check<list_files_request_t>(req, &error)) {
+    if (error_and_status_check<list_files_request_t>(req, &error))
+    {
         Local<Array> files_array = Nan::New<Array>();
-        for (uint8_t i=0; i<req->total_files; i++) {
+        for (uint8_t i = 0; i < req->total_files; i++)
+        {
             Local<Object> file = Nan::New<Object>();
             file->Set(Nan::New("filename").ToLocalChecked(), Nan::New(req->files[i].filename).ToLocalChecked());
             file->Set(Nan::New("mimetype").ToLocalChecked(), Nan::New(req->files[i].mimetype).ToLocalChecked());
@@ -256,23 +290,26 @@ void ListFilesCallback(uv_work_t *work_req, int status) {
 
     Local<Value> argv[] = {
         error,
-        files_value
-    };
+        files_value};
     callback->Call(2, argv);
     free(req);
     free(work_req);
 }
 
-void ListFiles(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 2 || !args[1]->IsFunction()) {
+void ListFiles(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 2 || !args[1]->IsFunction())
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
@@ -282,20 +319,22 @@ void ListFiles(const Nan::FunctionCallbackInfo<Value>& args) {
 
     Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
 
-    storj_bridge_list_files(env, bucket_id_dup, (void *) callback, ListFilesCallback);
+    storj_bridge_list_files(env, bucket_id_dup, (void *)callback, ListFilesCallback);
 }
 
-void CreateBucketCallback(uv_work_t *work_req, int status) {
+void CreateBucketCallback(uv_work_t *work_req, int status)
+{
     Nan::HandleScope scope;
 
-    create_bucket_request_t *req = (create_bucket_request_t *) work_req->data;
+    create_bucket_request_t *req = (create_bucket_request_t *)work_req->data;
 
-    Nan::Callback *callback = (Nan::Callback*)req->handle;
+    Nan::Callback *callback = (Nan::Callback *)req->handle;
 
     Local<Value> bucket_value = Nan::Null();
     Local<Value> error = Nan::Null();
 
-    if (error_and_status_check<create_bucket_request_t>(req, &error)) {
+    if (error_and_status_check<create_bucket_request_t>(req, &error))
+    {
         Local<Object> bucket_object = Nan::To<Object>(Nan::New<Object>()).ToLocalChecked();
         bucket_object->Set(Nan::New("name").ToLocalChecked(), Nan::New(req->bucket->name).ToLocalChecked());
         bucket_object->Set(Nan::New("id").ToLocalChecked(), Nan::New(req->bucket->id).ToLocalChecked());
@@ -305,23 +344,26 @@ void CreateBucketCallback(uv_work_t *work_req, int status) {
 
     Local<Value> argv[] = {
         error,
-        bucket_value
-    };
+        bucket_value};
     callback->Call(2, argv);
     free(req);
     free(work_req);
 }
 
-void CreateBucket(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 2 || !args[1]->IsFunction()) {
+void CreateBucket(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 2 || !args[1]->IsFunction())
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
@@ -331,37 +373,41 @@ void CreateBucket(const Nan::FunctionCallbackInfo<Value>& args) {
 
     Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
 
-    storj_bridge_create_bucket(env, name_dup, (void *) callback, CreateBucketCallback);
+    storj_bridge_create_bucket(env, name_dup, (void *)callback, CreateBucketCallback);
 }
 
-void DeleteBucketCallback(uv_work_t *work_req, int status) {
+void DeleteBucketCallback(uv_work_t *work_req, int status)
+{
     Nan::HandleScope scope;
 
-    json_request_t *req = (json_request_t *) work_req->data;
+    json_request_t *req = (json_request_t *)work_req->data;
 
-    Nan::Callback *callback = (Nan::Callback*)req->handle;
+    Nan::Callback *callback = (Nan::Callback *)req->handle;
     Local<Value> error = Nan::Null();
 
     error_and_status_check<json_request_t>(req, &error);
 
     Local<Value> argv[] = {
-        error
-    };
+        error};
     callback->Call(1, argv);
     free(req);
     free(work_req);
 }
 
-void DeleteBucket(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 2 || !args[1]->IsFunction()) {
+void DeleteBucket(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 2 || !args[1]->IsFunction())
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
@@ -371,17 +417,19 @@ void DeleteBucket(const Nan::FunctionCallbackInfo<Value>& args) {
 
     Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
 
-    storj_bridge_delete_bucket(env, id_dup, (void *) callback, DeleteBucketCallback);
+    storj_bridge_delete_bucket(env, id_dup, (void *)callback, DeleteBucketCallback);
 }
 
-void StoreFileFinishedCallback(int status, char *file_id, void *handle) {
+void StoreFileFinishedCallback(int status, char *file_id, void *handle)
+{
     Nan::HandleScope scope;
 
-    transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *) handle;
+    transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *)handle;
     Nan::Callback *callback = upload_callbacks->finished_callback;
 
     Local<Value> file_id_local = Nan::Null();
-    if (status == 0) {
+    if (status == 0)
+    {
         file_id_local = Nan::New(file_id).ToLocalChecked();
     }
 
@@ -389,19 +437,20 @@ void StoreFileFinishedCallback(int status, char *file_id, void *handle) {
 
     Local<Value> argv[] = {
         error,
-        file_id_local
-    };
+        file_id_local};
 
     callback->Call(2, argv);
-    if (file_id) {
+    if (file_id)
+    {
         free(file_id);
     }
 }
 
-void StoreFileProgressCallback(double progress, uint64_t downloaded_bytes, uint64_t total_bytes, void *handle) {
+void StoreFileProgressCallback(double progress, uint64_t downloaded_bytes, uint64_t total_bytes, void *handle)
+{
     Nan::HandleScope scope;
 
-    transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *) handle;
+    transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *)handle;
     Nan::Callback *callback = upload_callbacks->progress_callback;
 
     Local<Number> progress_local = Nan::New(progress);
@@ -411,30 +460,34 @@ void StoreFileProgressCallback(double progress, uint64_t downloaded_bytes, uint6
     Local<Value> argv[] = {
         progress_local,
         downloaded_bytes_local,
-        total_bytes_local
-    };
+        total_bytes_local};
 
     callback->Call(3, argv);
 }
 
-template<class StateType>
-void StateStatusErrorGetter(Local<String> property, const Nan::PropertyCallbackInfo <Value> &info) {
+template <class StateType>
+void StateStatusErrorGetter(Local<String> property, const Nan::PropertyCallbackInfo<Value> &info)
+{
     Local<Object> self = info.Holder();
-    StateType *state = (StateType *) self->GetAlignedPointerFromInternalField(0);
+    StateType *state = (StateType *)self->GetAlignedPointerFromInternalField(0);
     Local<Value> error = IntToStorjError(state->error_status);
     info.GetReturnValue().Set(error);
 }
 
-void StoreFile(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 3) {
+void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 3)
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
@@ -447,7 +500,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value>& args) {
 
     v8::Local<v8::Object> options = args[2].As<v8::Object>();
 
-    transfer_callbacks_t *upload_callbacks = static_cast<transfer_callbacks_t*>(malloc(sizeof(transfer_callbacks_t)));
+    transfer_callbacks_t *upload_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
     upload_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<Function>());
     upload_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<Function>());
@@ -461,28 +514,31 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value>& args) {
     const char *index_dup = strdup(index);
 
     FILE *fd = fopen(file_path, "r");
-    if (!fd) {
+    if (!fd)
+    {
         v8::Local<v8::String> msg = Nan::New("Unable to open file").ToLocalChecked();
         v8::Local<v8::Value> error = Nan::Error(msg);
 
         Local<Value> argv[] = {
             error,
-            Nan::Null()
-        };
+            Nan::Null()};
 
         upload_callbacks->finished_callback->Call(2, argv);
         return;
     }
 
     storj_upload_opts_t upload_opts = {};
-    upload_opts.prepare_frame_limit =  1,
-    upload_opts.push_frame_limit =  64;
-    upload_opts.push_shard_limit =  64;
-    upload_opts.rs =  true;
+    upload_opts.prepare_frame_limit = 1,
+    upload_opts.push_frame_limit = 64;
+    upload_opts.push_shard_limit = 64;
+    upload_opts.rs = true;
     upload_opts.bucket_id = bucket_id_dup;
-    if (strlen(index_dup) == 64) {
+    if (strlen(index_dup) == 64)
+    {
         upload_opts.index = index_dup;
-    } else {
+    }
+    else
+    {
         upload_opts.index = NULL;
     }
     upload_opts.file_name = file_name_dup;
@@ -490,19 +546,21 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value>& args) {
 
     storj_upload_state_t *state = storj_bridge_store_file(env,
                                                           &upload_opts,
-                                                          (void *) upload_callbacks,
+                                                          (void *)upload_callbacks,
                                                           StoreFileProgressCallback,
                                                           StoreFileFinishedCallback);
 
-    if (!state) {
+    if (!state)
+    {
         return Nan::ThrowError("Unable to create upload state");
     }
 
-    if (state->error_status) {
+    if (state->error_status)
+    {
         return Nan::ThrowError("Unable to queue file upload");
     }
 
-    Isolate* isolate = args.GetIsolate();
+    Isolate *isolate = args.GetIsolate();
     Local<ObjectTemplate> state_template = ObjectTemplate::New(isolate);
     state_template->SetInternalFieldCount(1);
 
@@ -514,8 +572,10 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(state_local);
 }
 
-void StoreFileCancel(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 1) {
+void StoreFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 1)
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
     Local<Object> state_local = Nan::To<Object>(args[0]).ToLocalChecked();
@@ -524,8 +584,10 @@ void StoreFileCancel(const Nan::FunctionCallbackInfo<Value>& args) {
     storj_bridge_store_file_cancel(state);
 }
 
-void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 1) {
+void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 1)
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
     Local<Object> state_local = Nan::To<Object>(args[0]).ToLocalChecked();
@@ -534,30 +596,31 @@ void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value>& args) {
     storj_bridge_resolve_file_cancel(state);
 }
 
-void ResolveFileFinishedCallback(int status, FILE *fd, void *handle) {
+void ResolveFileFinishedCallback(int status, FILE *fd, void *handle)
+{
     Nan::HandleScope scope;
 
     fclose(fd);
 
-    transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *) handle;
+    transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
     Nan::Callback *callback = download_callbacks->finished_callback;
 
     Local<Value> error = IntToStorjError(status);
 
     Local<Value> argv[] = {
-        error
-    };
+        error};
 
     callback->Call(1, argv);
 }
 
 void ResolveFileProgressCallback(double progress,
-        uint64_t downloaded_bytes,
-        uint64_t total_bytes,
-        void *handle) {
+                                 uint64_t downloaded_bytes,
+                                 uint64_t total_bytes,
+                                 void *handle)
+{
     Nan::HandleScope scope;
 
-    transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *) handle;
+    transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
     Nan::Callback *callback = download_callbacks->progress_callback;
 
     Local<Number> progress_local = Nan::New(progress);
@@ -567,22 +630,25 @@ void ResolveFileProgressCallback(double progress,
     Local<Value> argv[] = {
         progress_local,
         downloaded_bytes_local,
-        total_bytes_local
-    };
+        total_bytes_local};
 
     callback->Call(3, argv);
 }
 
-void ResolveFile(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 4) {
+void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 4)
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
@@ -597,10 +663,9 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value>& args) {
     String::Utf8Value file_path_str(args[2]);
     const char *file_path = *file_path_str;
 
-
     v8::Local<v8::Object> options = args[3].As<v8::Object>();
 
-    transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t*>(malloc(sizeof(transfer_callbacks_t)));
+    transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
     download_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<Function>());
     download_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<Function>());
@@ -608,21 +673,25 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value>& args) {
     Nan::MaybeLocal<Value> overwriteOption = options->Get(Nan::New("overwrite").ToLocalChecked());
 
     bool overwrite = false;
-    if (!overwriteOption.IsEmpty()) {
+    if (!overwriteOption.IsEmpty())
+    {
         overwrite = To<bool>(overwriteOption.ToLocalChecked()).FromJust();
     }
 
     FILE *fd = NULL;
 
-    if (access(file_path, F_OK) != -1 ) {
-        if (overwrite) {
+    if (access(file_path, F_OK) != -1)
+    {
+        if (overwrite)
+        {
             unlink(file_path);
-        } else {
+        }
+        else
+        {
             v8::Local<v8::String> msg = Nan::New("File already exists").ToLocalChecked();
             v8::Local<v8::Value> error = Nan::Error(msg);
             Local<Value> argv[] = {
-                error
-            };
+                error};
             download_callbacks->finished_callback->Call(1, argv);
             return;
         }
@@ -630,12 +699,12 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value>& args) {
 
     fd = fopen(file_path, "w+");
 
-    if (fd == NULL) {
+    if (fd == NULL)
+    {
         v8::Local<v8::String> msg = Nan::New(strerror(errno)).ToLocalChecked();
         v8::Local<v8::Value> error = Nan::Error(msg);
         Local<Value> argv[] = {
-            error
-        };
+            error};
         download_callbacks->finished_callback->Call(1, argv);
         return;
     }
@@ -644,18 +713,20 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value>& args) {
                                                               bucket_id_dup,
                                                               file_id_dup,
                                                               fd,
-                                                              (void *) download_callbacks,
+                                                              (void *)download_callbacks,
                                                               ResolveFileProgressCallback,
                                                               ResolveFileFinishedCallback);
-    if (!state) {
+    if (!state)
+    {
         return Nan::ThrowError("Unable to create download state");
     }
 
-    if (state->error_status) {
+    if (state->error_status)
+    {
         return Nan::ThrowError("Unable to queue file download");
     }
 
-    Isolate* isolate = args.GetIsolate();
+    Isolate *isolate = args.GetIsolate();
     Local<ObjectTemplate> state_template = ObjectTemplate::New(isolate);
     state_template->SetInternalFieldCount(1);
 
@@ -665,38 +736,41 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value>& args) {
                      StateStatusErrorGetter<storj_download_state_t>);
 
     args.GetReturnValue().Set(state_local);
-
 }
 
 // TODO: this is the same as DeleteBucketCallback; refactor
-void DeleteFileCallback(uv_work_t *work_req, int status) {
+void DeleteFileCallback(uv_work_t *work_req, int status)
+{
     Nan::HandleScope scope;
 
-    json_request_t *req = (json_request_t *) work_req->data;
+    json_request_t *req = (json_request_t *)work_req->data;
 
-    Nan::Callback *callback = (Nan::Callback*)req->handle;
+    Nan::Callback *callback = (Nan::Callback *)req->handle;
     Local<Value> error = Nan::Null();
 
     error_and_status_check<json_request_t>(req, &error);
 
     Local<Value> argv[] = {
-        error
-    };
+        error};
     callback->Call(1, argv);
     free(req);
     free(work_req);
 }
 
-void DeleteFile(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 3 || !args[2]->IsFunction()) {
+void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 3 || !args[2]->IsFunction())
+    {
         return Nan::ThrowError("Unexpected arguments");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
@@ -710,48 +784,54 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value>& args) {
 
     Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
 
-    storj_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *) callback, DeleteFileCallback);
+    storj_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *)callback, DeleteFileCallback);
 }
 
-void RegisterCallback(uv_work_t *work_req, int status) {
+void RegisterCallback(uv_work_t *work_req, int status)
+{
     Nan::HandleScope scope;
 
-    json_request_t *req = (json_request_t *) work_req->data;
+    json_request_t *req = (json_request_t *)work_req->data;
 
-    Nan::Callback *callback = (Nan::Callback*)req->handle;
-    
+    Nan::Callback *callback = (Nan::Callback *)req->handle;
+
     v8::Local<v8::Value> error = Nan::Null();
     v8::Local<Value> result = Nan::Null();
 
-    if (error_and_status_check<json_request_t>(req, &error)) {
+    if (error_and_status_check<json_request_t>(req, &error))
+    {
         const char *result_str = json_object_to_json_string(req->response);
         v8::Local<v8::String> result_json_string = Nan::New(result_str).ToLocalChecked();
         Nan::JSON NanJSON;
         Nan::MaybeLocal<v8::Value> res = NanJSON.Parse(result_json_string);
-        if (!res.IsEmpty()) {
+        if (!res.IsEmpty())
+        {
             result = res.ToLocalChecked();
         }
     }
 
     Local<Value> argv[] = {
         error,
-        result
-    };
+        result};
 
     callback->Call(2, argv);
     free(req);
     free(work_req);
 }
 
-void Register(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.Length() != 3 || !args[2]->IsFunction()) {
+void Register(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 3 || !args[2]->IsFunction())
+    {
         return Nan::ThrowError("3 arguments expected and the third argument is expected to be a function");
     }
-    if (args.This()->InternalFieldCount() != 1) {
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
@@ -765,39 +845,47 @@ void Register(const Nan::FunctionCallbackInfo<Value>& args) {
 
     Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
 
-    storj_bridge_register(env, email_dup, passwd_dup, (void *) callback, RegisterCallback);
+    storj_bridge_register(env, email_dup, passwd_dup, (void *)callback, RegisterCallback);
 }
 
-void DestroyEnvironment(const Nan::FunctionCallbackInfo<Value>& args) {
-    if (args.This()->InternalFieldCount() != 1) {
+void DestroyEnvironment(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.This()->InternalFieldCount() != 1)
+    {
         return Nan::ThrowError("Environment not available for instance");
     }
 
     storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env) {
+    if (!env)
+    {
         return Nan::ThrowError("Environment is not initialized");
     }
 
-    if (storj_destroy_env(env)) {
+    if (storj_destroy_env(env))
+    {
         Nan::ThrowError("Unable to destroy environment");
     }
     args.This()->SetAlignedPointerInInternalField(0, NULL);
 }
 
-void FreeEnvironmentCallback(const Nan::WeakCallbackInfo<free_env_proxy> &data) {
+void FreeEnvironmentCallback(const Nan::WeakCallbackInfo<free_env_proxy> &data)
+{
     free_env_proxy *proxy = data.GetParameter();
     Local<Object> obj = Nan::New<Object>(proxy->persistent);
     storj_env_t *env = (storj_env_t *)obj->GetAlignedPointerFromInternalField(0);
 
-    if (env && storj_destroy_env(env)) {
+    if (env && storj_destroy_env(env))
+    {
         Nan::ThrowError("Unable to destroy environment");
     }
     delete proxy;
 }
 
-void Environment(const v8::FunctionCallbackInfo<Value>& args) {
+void Environment(const v8::FunctionCallbackInfo<Value> &args)
+{
     Nan::EscapableHandleScope scope;
-    if (args.Length() == 0) {
+    if (args.Length() == 0)
+    {
         return Nan::ThrowError("First argument is expected");
     }
 
@@ -833,9 +921,12 @@ void Environment(const v8::FunctionCallbackInfo<Value>& args) {
     v8::Local<v8::Value> argv[] = {};
     maybeInstance = Nan::NewInstance(constructor->GetFunction(), 0, argv);
 
-    if (maybeInstance.IsEmpty()) {
+    if (maybeInstance.IsEmpty())
+    {
         return Nan::ThrowError("Could not create new Storj instance");
-    } else {
+    }
+    else
+    {
         instance = maybeInstance.ToLocalChecked();
     }
 
@@ -847,10 +938,14 @@ void Environment(const v8::FunctionCallbackInfo<Value>& args) {
     char host[100];
     int port = 0;
     sscanf(url, "%5[^://]://%99[^:/]:%99d", proto, host, &port);
-    if (port == 0) {
-        if (strcmp(proto, "http") == 0) {
+    if (port == 0)
+    {
+        if (strcmp(proto, "http") == 0)
+        {
             port = 80;
-        } else {
+        }
+        else
+        {
             port = 443;
         }
     }
@@ -868,19 +963,22 @@ void Environment(const v8::FunctionCallbackInfo<Value>& args) {
 
     storj_bridge_options_t bridge_options = {};
     bridge_options.proto = proto;
-    bridge_options.host  = host;
-    bridge_options.port  = port;
-    bridge_options.user  = user;
-    bridge_options.pass  = pass;
+    bridge_options.host = host;
+    bridge_options.port = port;
+    bridge_options.user = user;
+    bridge_options.pass = pass;
 
     storj_encrypt_options_t encrypt_options = {};
     encrypt_options.mnemonic = mnemonic;
 
     storj_http_options_t http_options = {};
-    if (!user_agent.IsEmpty()) {
+    if (!user_agent.IsEmpty())
+    {
         String::Utf8Value str(user_agent.ToLocalChecked());
         http_options.user_agent = strdup(*str);
-    } else {
+    }
+    else
+    {
         http_options.user_agent = "storj-test";
     }
     http_options.low_speed_limit = STORJ_LOW_SPEED_LIMIT;
@@ -891,7 +989,8 @@ void Environment(const v8::FunctionCallbackInfo<Value>& args) {
     static storj_log_options_t log_options = {};
     log_options.logger = JsonLogger;
     log_options.level = 0;
-    if (!logLevel.IsEmpty()) {
+    if (!logLevel.IsEmpty())
+    {
         log_options.level = To<int>(logLevel.ToLocalChecked()).FromJust();
     }
 
@@ -902,7 +1001,8 @@ void Environment(const v8::FunctionCallbackInfo<Value>& args) {
                                       &http_options,
                                       &log_options);
 
-    if (!env) {
+    if (!env)
+    {
         Nan::ThrowError("Environment is not initialized");
     }
 
@@ -927,7 +1027,8 @@ void Environment(const v8::FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(persistent);
 }
 
-void init(Handle<Object> exports) {
+void init(Handle<Object> exports)
+{
     NODE_SET_METHOD(exports, "Environment", Environment);
     NODE_SET_METHOD(exports, "utilTimestamp", Timestamp);
     NODE_SET_METHOD(exports, "mnemonicCheck", MnemonicCheck);
