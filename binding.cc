@@ -2,7 +2,7 @@
 #include <node_buffer.h>
 #include <nan.h>
 #include <uv.h>
-#include "storj.h"
+#include "genaro.h"
 
 using namespace v8;
 using namespace Nan;
@@ -22,17 +22,17 @@ typedef struct
 extern "C" void JsonLogger(const char *message, int level, void *handle)
 {
     printf("{\"message\": \"%s\", \"level\": %i, \"timestamp\": %" PRIu64 "}\n",
-           message, level, storj_util_timestamp());
+           message, level, genaro_util_timestamp());
 }
 
-Local<Value> IntToStorjError(int error_code)
+Local<Value> IntToGenaroError(int error_code)
 {
     if (!error_code)
     {
         return Nan::Null();
     }
 
-    const char *error_msg = storj_strerror(error_code);
+    const char *error_msg = genaro_strerror(error_code);
     v8::Local<v8::String> msg = Nan::New(error_msg).ToLocalChecked();
     v8::Local<v8::Value> error = Nan::Error(msg);
 
@@ -108,7 +108,7 @@ void Timestamp(const v8::FunctionCallbackInfo<Value> &args)
 {
     Isolate *isolate = args.GetIsolate();
 
-    uint64_t timestamp = storj_util_timestamp();
+    uint64_t timestamp = genaro_util_timestamp();
     Local<Number> timestamp_local = Number::New(isolate, timestamp);
 
     args.GetReturnValue().Set(timestamp_local);
@@ -121,7 +121,7 @@ void MnemonicCheck(const v8::FunctionCallbackInfo<Value> &args)
     String::Utf8Value str(args[0]);
     const char *mnemonic = *str;
 
-    bool mnemonic_check_result = storj_mnemonic_check(mnemonic);
+    bool mnemonic_check_result = genaro_mnemonic_check(mnemonic);
     Local<Boolean> mnemonic_check_result_local = Boolean::New(isolate, mnemonic_check_result);
 
     args.GetReturnValue().Set(mnemonic_check_result_local);
@@ -134,7 +134,7 @@ void MnemonicGenerate(const v8::FunctionCallbackInfo<Value> &args)
     char *mnemonic_result = NULL;
     int32_t strength = Nan::To<int32_t>(args[0]).FromJust();
 
-    storj_mnemonic_generate(strength, &mnemonic_result);
+    genaro_mnemonic_generate(strength, &mnemonic_result);
     Local<String> mnemonic_local = String::NewFromUtf8(isolate, mnemonic_result);
 
     free(mnemonic_result);
@@ -184,7 +184,7 @@ void GetInfo(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -192,7 +192,7 @@ void GetInfo(const Nan::FunctionCallbackInfo<Value> &args)
 
     Nan::Callback *callback = new Nan::Callback(args[0].As<Function>());
 
-    storj_bridge_get_info(env, (void *)callback, GetInfoCallback);
+    genaro_bridge_get_info(env, (void *)callback, GetInfoCallback);
 }
 
 Local<Date> StrToDate(const char *dateStr)
@@ -251,7 +251,7 @@ void GetBuckets(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -259,7 +259,7 @@ void GetBuckets(const Nan::FunctionCallbackInfo<Value> &args)
 
     Nan::Callback *callback = new Nan::Callback(args[0].As<Function>());
 
-    storj_bridge_get_buckets(env, (void *)callback, GetBucketsCallback);
+    genaro_bridge_get_buckets(env, (void *)callback, GetBucketsCallback);
 }
 
 void ListFilesCallback(uv_work_t *work_req, int status)
@@ -307,7 +307,7 @@ void ListFiles(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -319,7 +319,7 @@ void ListFiles(const Nan::FunctionCallbackInfo<Value> &args)
 
     Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
 
-    storj_bridge_list_files(env, bucket_id_dup, (void *)callback, ListFilesCallback);
+    genaro_bridge_list_files(env, bucket_id_dup, (void *)callback, ListFilesCallback);
 }
 
 void CreateBucketCallback(uv_work_t *work_req, int status)
@@ -361,7 +361,7 @@ void CreateBucket(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -373,7 +373,7 @@ void CreateBucket(const Nan::FunctionCallbackInfo<Value> &args)
 
     Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
 
-    storj_bridge_create_bucket(env, name_dup, (void *)callback, CreateBucketCallback);
+    genaro_bridge_create_bucket(env, name_dup, (void *)callback, CreateBucketCallback);
 }
 
 void DeleteBucketCallback(uv_work_t *work_req, int status)
@@ -405,7 +405,7 @@ void DeleteBucket(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -417,7 +417,7 @@ void DeleteBucket(const Nan::FunctionCallbackInfo<Value> &args)
 
     Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
 
-    storj_bridge_delete_bucket(env, id_dup, (void *)callback, DeleteBucketCallback);
+    genaro_bridge_delete_bucket(env, id_dup, (void *)callback, DeleteBucketCallback);
 }
 
 void StoreFileFinishedCallback(int status, char *file_id, void *handle)
@@ -433,7 +433,7 @@ void StoreFileFinishedCallback(int status, char *file_id, void *handle)
         file_id_local = Nan::New(file_id).ToLocalChecked();
     }
 
-    Local<Value> error = IntToStorjError(status);
+    Local<Value> error = IntToGenaroError(status);
 
     Local<Value> argv[] = {
         error,
@@ -470,7 +470,7 @@ void StateStatusErrorGetter(Local<String> property, const Nan::PropertyCallbackI
 {
     Local<Object> self = info.Holder();
     StateType *state = (StateType *)self->GetAlignedPointerFromInternalField(0);
-    Local<Value> error = IntToStorjError(state->error_status);
+    Local<Value> error = IntToGenaroError(state->error_status);
     info.GetReturnValue().Set(error);
 }
 
@@ -485,7 +485,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -527,7 +527,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
         return;
     }
 
-    storj_upload_opts_t upload_opts = {};
+    genaro_upload_opts_t upload_opts = {};
     upload_opts.prepare_frame_limit = 1,
     upload_opts.push_frame_limit = 64;
     upload_opts.push_shard_limit = 64;
@@ -544,7 +544,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
     upload_opts.file_name = file_name_dup;
     upload_opts.fd = fd;
 
-    storj_upload_state_t *state = storj_bridge_store_file(env,
+    genaro_upload_state_t *state = genaro_bridge_store_file(env,
                                                           &upload_opts,
                                                           (void *)upload_callbacks,
                                                           StoreFileProgressCallback,
@@ -567,7 +567,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
     Local<Object> state_local = state_template->NewInstance();
     state_local->SetAlignedPointerInInternalField(0, state);
     Nan::SetAccessor(state_local, Nan::New("error_status").ToLocalChecked(),
-                     StateStatusErrorGetter<storj_upload_state_t>);
+                     StateStatusErrorGetter<genaro_upload_state_t>);
 
     args.GetReturnValue().Set(state_local);
 }
@@ -579,9 +579,9 @@ void StoreFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Unexpected arguments");
     }
     Local<Object> state_local = Nan::To<Object>(args[0]).ToLocalChecked();
-    storj_upload_state_t *state = (storj_upload_state_t *)state_local->GetAlignedPointerFromInternalField(0);
+    genaro_upload_state_t *state = (genaro_upload_state_t *)state_local->GetAlignedPointerFromInternalField(0);
 
-    storj_bridge_store_file_cancel(state);
+    genaro_bridge_store_file_cancel(state);
 }
 
 void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
@@ -591,9 +591,9 @@ void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Unexpected arguments");
     }
     Local<Object> state_local = Nan::To<Object>(args[0]).ToLocalChecked();
-    storj_download_state_t *state = (storj_download_state_t *)state_local->GetAlignedPointerFromInternalField(0);
+    genaro_download_state_t *state = (genaro_download_state_t *)state_local->GetAlignedPointerFromInternalField(0);
 
-    storj_bridge_resolve_file_cancel(state);
+    genaro_bridge_resolve_file_cancel(state);
 }
 
 void ResolveFileFinishedCallback(int status, FILE *fd, void *handle)
@@ -605,7 +605,7 @@ void ResolveFileFinishedCallback(int status, FILE *fd, void *handle)
     transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
     Nan::Callback *callback = download_callbacks->finished_callback;
 
-    Local<Value> error = IntToStorjError(status);
+    Local<Value> error = IntToGenaroError(status);
 
     Local<Value> argv[] = {
         error};
@@ -646,7 +646,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -709,7 +709,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
         return;
     }
 
-    storj_download_state_t *state = storj_bridge_resolve_file(env,
+    genaro_download_state_t *state = genaro_bridge_resolve_file(env,
                                                               bucket_id_dup,
                                                               file_id_dup,
                                                               fd,
@@ -733,7 +733,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
     Local<Object> state_local = state_template->NewInstance();
     state_local->SetAlignedPointerInInternalField(0, state);
     Nan::SetAccessor(state_local, Nan::New("error_status").ToLocalChecked(),
-                     StateStatusErrorGetter<storj_download_state_t>);
+                     StateStatusErrorGetter<genaro_download_state_t>);
 
     args.GetReturnValue().Set(state_local);
 }
@@ -768,7 +768,7 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -784,7 +784,7 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
 
     Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
 
-    storj_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *)callback, DeleteFileCallback);
+    genaro_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *)callback, DeleteFileCallback);
 }
 
 void RegisterCallback(uv_work_t *work_req, int status)
@@ -829,7 +829,7 @@ void Register(const Nan::FunctionCallbackInfo<Value> &args)
     {
         return Nan::ThrowError("Environment not available for instance");
     }
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
@@ -845,7 +845,7 @@ void Register(const Nan::FunctionCallbackInfo<Value> &args)
 
     Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
 
-    storj_bridge_register(env, email_dup, passwd_dup, (void *)callback, RegisterCallback);
+    genaro_bridge_register(env, email_dup, passwd_dup, (void *)callback, RegisterCallback);
 }
 
 void DestroyEnvironment(const Nan::FunctionCallbackInfo<Value> &args)
@@ -855,13 +855,13 @@ void DestroyEnvironment(const Nan::FunctionCallbackInfo<Value> &args)
         return Nan::ThrowError("Environment not available for instance");
     }
 
-    storj_env_t *env = (storj_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
     if (!env)
     {
         return Nan::ThrowError("Environment is not initialized");
     }
 
-    if (storj_destroy_env(env))
+    if (genaro_destroy_env(env))
     {
         Nan::ThrowError("Unable to destroy environment");
     }
@@ -872,9 +872,9 @@ void FreeEnvironmentCallback(const Nan::WeakCallbackInfo<free_env_proxy> &data)
 {
     free_env_proxy *proxy = data.GetParameter();
     Local<Object> obj = Nan::New<Object>(proxy->persistent);
-    storj_env_t *env = (storj_env_t *)obj->GetAlignedPointerFromInternalField(0);
+    genaro_env_t *env = (genaro_env_t *)obj->GetAlignedPointerFromInternalField(0);
 
-    if (env && storj_destroy_env(env))
+    if (env && genaro_destroy_env(env))
     {
         Nan::ThrowError("Unable to destroy environment");
     }
@@ -894,6 +894,8 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> bridgeUser = options->Get(Nan::New("bridgeUser").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> bridgePass = options->Get(Nan::New("bridgePass").ToLocalChecked()).As<v8::String>();
+    v8::Local<v8::String> bridgeApiKey = options->Get(Nan::New("bridgeApiKey").ToLocalChecked()).As<v8::String>();
+    v8::Local<v8::String> bridgeSecretKey = options->Get(Nan::New("bridgeSecretKey").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> encryptionKey = options->Get(Nan::New("encryptionKey").ToLocalChecked()).As<v8::String>();
     Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
     Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
@@ -923,7 +925,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 
     if (maybeInstance.IsEmpty())
     {
-        return Nan::ThrowError("Could not create new Storj instance");
+        return Nan::ThrowError("Could not create new Genaro instance");
     }
     else
     {
@@ -958,20 +960,26 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     const char *pass = *_bridgePass;
     String::Utf8Value _encryptionKey(encryptionKey);
     const char *mnemonic = *_encryptionKey;
+    String::Utf8Value _bridgeApiKey(bridgeApiKey);
+    const char *apikey = *_bridgeApiKey;
+    String::Utf8Value _bridgeSecretKey(bridgeSecretKey);
+    const char *secretkey = *_bridgeSecretKey;
 
     // Setup option structs
 
-    storj_bridge_options_t bridge_options = {};
+    genaro_bridge_options_t bridge_options = {};
     bridge_options.proto = proto;
     bridge_options.host = host;
     bridge_options.port = port;
     bridge_options.user = user;
     bridge_options.pass = pass;
+    bridge_options.apikey  = apikey;
+    bridge_options.secretkey  = secretkey;
 
-    storj_encrypt_options_t encrypt_options = {};
+    genaro_encrypt_options_t encrypt_options = {};
     encrypt_options.mnemonic = mnemonic;
 
-    storj_http_options_t http_options = {};
+    genaro_http_options_t http_options = {};
     if (!user_agent.IsEmpty())
     {
         String::Utf8Value str(user_agent.ToLocalChecked());
@@ -979,14 +987,14 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     }
     else
     {
-        http_options.user_agent = "storj-test";
+        http_options.user_agent = "genaro-test";
     }
-    http_options.low_speed_limit = STORJ_LOW_SPEED_LIMIT;
-    http_options.low_speed_time = STORJ_LOW_SPEED_TIME;
-    http_options.timeout = STORJ_HTTP_TIMEOUT;
+    http_options.low_speed_limit = GENARO_LOW_SPEED_LIMIT;
+    http_options.low_speed_time = GENARO_LOW_SPEED_TIME;
+    http_options.timeout = GENARO_HTTP_TIMEOUT;
     http_options.cainfo_path = NULL;
 
-    static storj_log_options_t log_options = {};
+    static genaro_log_options_t log_options = {};
     log_options.logger = JsonLogger;
     log_options.level = 0;
     if (!logLevel.IsEmpty())
@@ -996,7 +1004,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 
     // Initialize environment
 
-    storj_env_t *env = storj_init_env(&bridge_options,
+    genaro_env_t *env = genaro_init_env(&bridge_options,
                                       &encrypt_options,
                                       &http_options,
                                       &log_options);
@@ -1022,7 +1030,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     // There is no guarantee that the free callback will be called
     persistent.SetWeak(proxy, FreeEnvironmentCallback, WeakCallbackType::kParameter);
     persistent.MarkIndependent();
-    Nan::AdjustExternalMemory(sizeof(storj_env_t));
+    Nan::AdjustExternalMemory(sizeof(genaro_env_t));
 
     args.GetReturnValue().Set(persistent);
 }
@@ -1035,4 +1043,4 @@ void init(Handle<Object> exports)
     NODE_SET_METHOD(exports, "mnemonicGenerate", MnemonicGenerate);
 }
 
-NODE_MODULE(storj, init);
+NODE_MODULE(genaro, init);

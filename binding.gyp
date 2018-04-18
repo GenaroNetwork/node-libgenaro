@@ -1,6 +1,6 @@
 {
   'targets': [{
-    'target_name': 'libstorj',
+    'target_name': 'libgenaro',
     'include_dirs' : [
       '<!(node -e "require(\'nan\')")',
       '<!(node ./binding.js include_dirs)',

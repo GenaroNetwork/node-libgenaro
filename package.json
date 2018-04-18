@@ -48,33 +48,21 @@
     "express": "^4.15.3",
     "mocha": "^3.4.2"
   },
-  "libstorj": {
-    "basePath": "./libstorj-2.0.0-beta",
-    "baseUrl": "https://github.com/Storj/libstorj/releases/download/v2.0.0-beta",
+  "libgenaro": {
+    "basePath": "./libgenaro-1.0.0-beta",
+    "baseUrl": "https://github.com/GenaroNetwork/libgenaro/releases/download/1.0.0-beta",
     "releases": [
-      {
-        "arch": "arm",
-        "platform": "linux",
-        "filename": "libstorj-2.0.0-beta-linux-armv7.tar.gz",
-        "checksum": "5aa8c4bada91faf1a62134930618c5d91a2aa952b18725236e57ce43459b9f25"
-      },
-      {
-        "arch": "ia32",
-        "platform": "linux",
-        "filename": "libstorj-2.0.0-beta-linux32.tar.gz",
-        "checksum": "3a1873a71742ccc44682f4c5000a04aa16cf39183f3753855d6a503fc9c011c5"
-      },
       {
         "arch": "x64",
         "platform": "linux",
-        "filename": "libstorj-2.0.0-beta-linux64.tar.gz",
-        "checksum": "a4d257dfba81836fc409aedab92f2e35c8c25b1910ef82791501fb251774b1b8"
+        "filename": "linux_x64.tar.gz",
+        "checksum": "4441ef8bcd1bbe34eec25a8973bc2ebc4051f4554cae92483bd4cbfe016093c9"
       },
       {
         "arch": "x64",
         "platform": "darwin",
-        "filename": "libstorj-2.0.0-beta-macos.tar.gz",
-        "checksum": "1af76726b183437b75e6b77393d5da1cb729a0272b5180f7eb983ec1d9850750"
+        "filename": "darwin.tar.gz",
+        "checksum": "c86ddffe85efd9156e3c94bcd82924ba0be401fd03eaa1491b9cb02a0ec13713"
       }
     ]
   }

@@ -5,6 +5,6 @@ node_modules/*
 *.log
 *.log.*
 .idea/*
-storj-test-download.data
-storj-test-upload.data
-libstorj-*
+genaro-test-download.data
+genaro-test-upload.data
+libgenaro-*

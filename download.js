@@ -6,24 +6,26 @@ const stderr = process.stderr;
 const path = require('path');
 const fs = require('fs');
 const basedir = path.resolve(__dirname);
-const libstorj = require('./package.json').libstorj;
-const releases = libstorj.releases;
+const libgenaro = require('./package.json').libgenaro;
+const releases = libgenaro.releases;
 
 let installed = true;
 try {
-  execSync('pkg-config --exists libstorj');
+  execSync('pkg-config --exists libgenaro');
 } catch(e) {
   installed = false;
 }
 
 if (installed) {
-  stdout.write(`Skipping download of libstorj, already installed.\n`);
+  stdout.write(`Skipping download of libgenaro, already installed.\n`);
   process.exit(0);
 }
 
 const arch = process.arch;
 const platform = process.platform;
-const baseUrl = libstorj.baseUrl;
+const baseUrl = libgenaro.baseUrl;
+const filePath = libgenaro['libgenaro-1.0.0-beta'];
+const filePathAbsolute = path.resolve(basedir, './' + filePath);
 
 let checksum = null;
 let filename = null;
@@ -37,33 +39,35 @@ for (var i = 0; i < releases.length; i++) {
 }
 
 if (!filename) {
-  stderr.write(`Unable to download libstorj for platform: ${platform} and arch: ${arch}\n`);
+  stderr.write(`Unable to download libgenaro for platform: ${platform} and arch: ${arch}\n`);
   process.exit(1);
 }
 
 const url = baseUrl + '/' + filename;
 const target = path.resolve(basedir, './' + filename);
 const download = `curl --location --fail --connect-timeout 120 --retry 3 -o "${target}" "${url}"`
-const extract = `tar --verbose -xf ${target}`;
+const extract = `tar -xzf ${target} -C filePathAbsolute`;
 const hasher = `${sha256sum} ${target} | awk '{print $1}'`
 
 if (fs.existsSync(target)) {
-  stdout.write(`Already downloaded libstorj \n  at: ${target}\n`);
+  stdout.write(`Already downloaded libgenaro \n  at: ${target}\n`);
 } else {
-  stdout.write(`Downloading libstorj \n  from: ${url} \n  to: ${target}\n`);
+  stdout.write(`Downloading libgenaro \n  from: ${url} \n  to: ${target}\n`);
   execSync(download);
 }
 
 const hashbuf = execSync(hasher);
 const hash = hashbuf.toString().trim();
 if (hash === checksum) {
-  stdout.write(`Verified libstorj: \n  file: ${target}\n  hash: ${checksum}\n`);
+  stdout.write(`Verified libgenaro: \n  file: ${target}\n  hash: ${checksum}\n`);
 } else {
-  stderr.write(`Unable to verify libstorj release: ${target} \n  expect: ${checksum}\n  actual: ${hash}\n`);
+  stderr.write(`Unable to verify libgenaro release: ${target} \n  expect: ${checksum}\n  actual: ${hash}\n`);
   process.exit(1);
 }
 
 stdout.write(`Extracting target: ${target}\n`);
+execSync(`rm -rf ${filePathAbsolute}`);
+execSync(`mkdir ${filePathAbsolute}`);
 execSync(extract);
 
 process.exit(0);

@@ -4,11 +4,11 @@ const { execSync } = require('child_process');
 const stdout = process.stdout;
 const path = require('path');
 const basedir = path.resolve(__dirname);
-const libstorj = require('./package.json').libstorj;
-const basePath = libstorj.basePath;
+const libgenaro = require('./package.json').libgenaro;
+const basePath = libgenaro.basePath;
 
-const libstorjArchive = path.resolve(basedir, basePath + '/lib/libstorj.a');
-const libstorjIncludes = path.resolve(basedir, basePath + '/include');
+const libgenaroArchive = path.resolve(basedir, basePath + '/lib/libgenaro.a');
+const libgenaroIncludes = path.resolve(basedir, basePath + '/include');
 const depsIncludes = path.resolve(basedir, basePath + '/depends/include');
 
 let archives = [
@@ -24,7 +24,7 @@ archives = archives.map((a) => path.resolve(basedir, basePath + a));
 
 let installed = true;
 try {
-  let output = execSync('pkg-config --exists libstorj', { stdio: ['ignore', 'ignore', 'ignore'] });
+  let output = execSync('pkg-config --exists libgenaro', { stdio: ['ignore', 'ignore', 'ignore'] });
 } catch(e) {
   installed = false;
 }
@@ -35,11 +35,11 @@ let status = 1;
 switch(cmd) {
   case 'libraries':
     status = 0;
-    stdout.write(installed ? '-lstorj' : libstorjArchive);
+    stdout.write(installed ? '-lstorj' : libgenaroArchive);
     break;
   case 'include_dirs':
     status = 0;
-    stdout.write(installed ? 'storj.h' : libstorjIncludes);
+    stdout.write(installed ? 'storj.h' : libgenaroIncludes);
     break;
   case 'include_dirs_deps':
     status = 0;
