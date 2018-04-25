@@ -1,7 +1,7 @@
 {
-  "name": "storj",
-  "version": "5.0.0",
-  "description": "Node.js library for encrypted file transfer on the Storj network.",
+  "name": "libgenaro",
+  "version": "1.0.0",
+  "description": "Node.js library for encrypted file transfer on the Genaro network.",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/mocha test/**.test.js --recursive",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/storj/node-libstorj.git"
+    "url": "git+https://github.com/GenaroNetwork/node-libgenaro.git"
   },
   "keywords": [
-    "storj",
+    "genaro",
     "encryption",
     "storage"
   ],
-  "author": "Storj Labs, Inc.",
+  "author": "Storj Labs, Inc. Geanro Network.",
   "contributors": [
     {
       "name": "Braydon Fuller",
@@ -34,9 +34,9 @@
   ],
   "license": "LGPL-3.0",
   "bugs": {
-    "url": "https://github.com/storj/node-libstorj/issues"
+    "url": "https://github.com/GenaroNetwork/node-libgenaro/issues"
   },
-  "homepage": "https://github.com/storj/node-libstorj#readme",
+  "homepage": "https://github.com/GenaroNetwork/node-libgenaro#readme",
   "dependencies": {
     "bindings": "^1.2.1",
     "nan": "^2.6.2"
