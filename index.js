@@ -1,3 +1,3 @@
 'use strict';
 
-module.exports = require('bindings')('geanro.node');
+module.exports = require('bindings')('genaro.node');
