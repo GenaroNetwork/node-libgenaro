@@ -12,7 +12,7 @@ const releases = libgenaro.releases;
 let installed = true;
 try {
   execSync('pkg-config --exists libgenaro');
-} catch(e) {
+} catch (e) {
   installed = false;
 }
 
@@ -46,7 +46,7 @@ if (!filename) {
 const url = baseUrl + '/' + filename;
 const target = path.resolve(basedir, './' + filename);
 const download = `curl --location --fail --connect-timeout 120 --retry 3 -o "${target}" "${url}"`
-const extract = `tar -xzf ${target} -C filePathAbsolute`;
+const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
 const hasher = `${sha256sum} ${target} | awk '{print $1}'`
 
 if (fs.existsSync(target)) {
