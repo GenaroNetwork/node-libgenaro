@@ -1,3 +1,3 @@
 'use strict';
 
-module.exports = require('bindings')('storj.node');
+module.exports = require('bindings')('geanro.node');
