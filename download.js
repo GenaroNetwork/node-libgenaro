@@ -24,7 +24,7 @@ if (installed) {
 const arch = process.arch;
 const platform = process.platform;
 const baseUrl = libgenaro.baseUrl;
-const filePath = libgenaro['libgenaro-1.0.0-beta'];
+const filePath = libgenaro.basePath;
 const filePathAbsolute = path.resolve(basedir, './' + filePath);
 
 let checksum = null;
