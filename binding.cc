@@ -545,10 +545,10 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
     upload_opts.fd = fd;
 
     genaro_upload_state_t *state = genaro_bridge_store_file(env,
-                                                          &upload_opts,
-                                                          (void *)upload_callbacks,
-                                                          StoreFileProgressCallback,
-                                                          StoreFileFinishedCallback);
+                                                            &upload_opts,
+                                                            (void *)upload_callbacks,
+                                                            StoreFileProgressCallback,
+                                                            StoreFileFinishedCallback);
 
     if (!state)
     {
@@ -710,12 +710,12 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
     }
 
     genaro_download_state_t *state = genaro_bridge_resolve_file(env,
-                                                              bucket_id_dup,
-                                                              file_id_dup,
-                                                              fd,
-                                                              (void *)download_callbacks,
-                                                              ResolveFileProgressCallback,
-                                                              ResolveFileFinishedCallback);
+                                                                bucket_id_dup,
+                                                                file_id_dup,
+                                                                fd,
+                                                                (void *)download_callbacks,
+                                                                ResolveFileProgressCallback,
+                                                                ResolveFileFinishedCallback);
     if (!state)
     {
         return Nan::ThrowError("Unable to create download state");
@@ -894,9 +894,9 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> bridgeUser = options->Get(Nan::New("bridgeUser").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> bridgePass = options->Get(Nan::New("bridgePass").ToLocalChecked()).As<v8::String>();
+    v8::Local<v8::String> encryptionKey = options->Get(Nan::New("encryptionKey").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> bridgeApiKey = options->Get(Nan::New("bridgeApiKey").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> bridgeSecretKey = options->Get(Nan::New("bridgeSecretKey").ToLocalChecked()).As<v8::String>();
-    v8::Local<v8::String> encryptionKey = options->Get(Nan::New("encryptionKey").ToLocalChecked()).As<v8::String>();
     Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
     Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
 
@@ -973,8 +973,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     bridge_options.port = port;
     bridge_options.user = user;
     bridge_options.pass = pass;
-    bridge_options.apikey  = apikey;
-    bridge_options.secretkey  = secretkey;
 
     genaro_encrypt_options_t encrypt_options = {};
     encrypt_options.mnemonic = mnemonic;
@@ -1002,12 +1000,23 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
         log_options.level = To<int>(logLevel.ToLocalChecked()).FromJust();
     }
 
+    if (apikey == "undefined" || secretkey == "undefined")
+    {
+        bridge_options.apikey = NULL;
+        bridge_options.secretkey = NULL;
+    }
+    else
+    {
+        bridge_options.apikey = apikey;
+        bridge_options.secretkey = secretkey;
+    }
+
     // Initialize environment
 
     genaro_env_t *env = genaro_init_env(&bridge_options,
-                                      &encrypt_options,
-                                      &http_options,
-                                      &log_options);
+                                        &encrypt_options,
+                                        &http_options,
+                                        &log_options);
 
     if (!env)
     {
