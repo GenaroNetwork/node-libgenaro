@@ -895,10 +895,10 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     v8::Local<v8::String> bridgeUser = options->Get(Nan::New("bridgeUser").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> bridgePass = options->Get(Nan::New("bridgePass").ToLocalChecked()).As<v8::String>();
     v8::Local<v8::String> encryptionKey = options->Get(Nan::New("encryptionKey").ToLocalChecked()).As<v8::String>();
-    v8::Local<v8::String> bridgeApiKey = options->Get(Nan::New("bridgeApiKey").ToLocalChecked()).As<v8::String>();
-    v8::Local<v8::String> bridgeSecretKey = options->Get(Nan::New("bridgeSecretKey").ToLocalChecked()).As<v8::String>();
     Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
     Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
+    Nan::MaybeLocal<Value> bridgeApiKey = options->Get(Nan::New("bridgeApiKey").ToLocalChecked());
+    Nan::MaybeLocal<Value> bridgeSecretKey = options->Get(Nan::New("bridgeSecretKey").ToLocalChecked());
 
     v8::Local<v8::FunctionTemplate> constructor = Nan::New<v8::FunctionTemplate>();
     constructor->SetClassName(Nan::New("Environment").ToLocalChecked());
@@ -960,10 +960,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     const char *pass = *_bridgePass;
     String::Utf8Value _encryptionKey(encryptionKey);
     const char *mnemonic = *_encryptionKey;
-    String::Utf8Value _bridgeApiKey(bridgeApiKey);
-    const char *apikey = *_bridgeApiKey;
-    String::Utf8Value _bridgeSecretKey(bridgeSecretKey);
-    const char *secretkey = *_bridgeSecretKey;
 
     // Setup option structs
 
@@ -978,7 +974,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     encrypt_options.mnemonic = mnemonic;
 
     genaro_http_options_t http_options = {};
-    if (!user_agent.IsEmpty())
+    if (!user_agent.ToLocalChecked()->IsNullOrUndefined())
     {
         String::Utf8Value str(user_agent.ToLocalChecked());
         http_options.user_agent = strdup(*str);
@@ -995,20 +991,23 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     static genaro_log_options_t log_options = {};
     log_options.logger = JsonLogger;
     log_options.level = 0;
-    if (!logLevel.IsEmpty())
+    if (!logLevel.ToLocalChecked()->IsNullOrUndefined())
     {
         log_options.level = To<int>(logLevel.ToLocalChecked()).FromJust();
     }
 
-    if (apikey == "undefined" || secretkey == "undefined")
+    if (!bridgeApiKey.ToLocalChecked()->IsNullOrUndefined() && !bridgeSecretKey.ToLocalChecked()->IsNullOrUndefined())
     {
-        bridge_options.apikey = NULL;
-        bridge_options.secretkey = NULL;
+        String::Utf8Value _bridgeApiKey(bridgeApiKey.ToLocalChecked());
+        bridge_options.apikey = strdup(*_bridgeApiKey);
+
+        String::Utf8Value _bridgeSecretKey(bridgeSecretKey.ToLocalChecked());
+        bridge_options.secretkey = strdup(*_bridgeSecretKey);
     }
     else
     {
-        bridge_options.apikey = apikey;
-        bridge_options.secretkey = secretkey;
+        bridge_options.apikey = NULL;
+        bridge_options.secretkey = NULL;
     }
 
     // Initialize environment
