@@ -1,14 +1,14 @@
-# node-libstorj
+# node-libgenaro
 
-[![Build Status](https://travis-ci.org/Storj/node-libstorj.svg?branch=master)](https://travis-ci.org/Storj/node-libstorj)
+[![Build Status](https://travis-ci.org/GenaroNetwork/node-libgenaro.svg?branch=master)](https://travis-ci.org/GenaroNetwork/node-libgenaro)
 
-Node.js library for encrypted file transfer on the Storj network via bindings to [libstorj](https://github.com/Storj/libstorj).
+Node.js library for encrypted file transfer on the GenaroNetwork network via bindings to [libgenaro](https://github.com/GenaroNetwork/libgenaro).
 
 ## Example Usage
 
 Install via npm:
 ```
-npm install github:storj/node-libstorj --save
+npm install libgenaro
 ```
 
 Please see [`./examples`](/examples) directory for example code usage.
@@ -16,24 +16,27 @@ Please see [`./examples`](/examples) directory for example code usage.
 First setup the storj environment with authentication and encryption options:
 
 ```js
-const { Environment } = require('storj');
+const { Environment } = require('libgenaro');
 
-const storj = new Environment({
-  bridgeUrl: 'https://api.storj.io',
+const libgenaro = new Environment({
+  bridgeUrl: 'http://101.132.159.197:8080',
   bridgeUser: 'user@domain.com',
   bridgePass: 'password',
+  bridgeApiKey: 'xx0000000000000000000000000000000000000000',
+  bridgeSecretKey: 'xx0000000000000000000000000000000000000000',
   encryptionKey: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
   logLevel: 4
 });
+// pick one of [bridgeUser + bridgePass] and [bridgeApiKey + bridgeSecretKey]
 ```
 
 Upload a file to a bucket:
 ```js
 const bucketId = '368be0816766b28fd5f43af5';
-const filePath = './storj-test-upload.data';
+const filePath = './test-upload.data';
 
-const state = storj.storeFile(bucketId, filePath, {
-  filename: 'storj-test-upload.data',
+const state = libgenaro.storeFile(bucketId, filePath, {
+  filename: 'test-upload.data',
   progressCallback: function(progress, downloadedBytes, totalBytes) {
     console.log('progress:', progress);
   },
@@ -52,9 +55,9 @@ Download a file from a bucket:
 ```js
 const bucketId = '368be0816766b28fd5f43af5';
 const fileId = '998960317b6725a3f8080c2b';
-const downloadFilePath = './storj-test-download.data';
+const downloadFilePath = './test-download.data';
 
-const state = storj.resolveFile(bucketId, fileId, downloadFilePath, {
+const state = libgenaro.resolveFile(bucketId, fileId, downloadFilePath, {
   progressCallback: function(progress, downloadedBytes, totalBytes) {
     console.log('progress:', progress)
   },
@@ -70,7 +73,7 @@ const state = storj.resolveFile(bucketId, fileId, downloadFilePath, {
 Once finished, you should call to zero and free memory holding encryption keys:
 
 ```js
-storj.destroy();
+libgenaro.destroy();
 ```
 
 Please see [`./examples`](/examples) directory for further usage.
@@ -96,33 +99,6 @@ Methods available on an instance of `Environment`:
 - `.deleteFile(bucketId, fileId, function(err, result) {})` - Deletes a file from a bucket
 - `.destroy()` - This will zero and free memory of encryption keys and the environment
 
-## Development & Testing
-
-If you do not already have `libstorj` installed on your system, you can install from the directions at https://github.com/Storj/libstorj This isn't required, however it's best for development.
-
-If you do not have `node-gyp` installed:
-
-```
-$ npm install -g node-gyp
-```
-
-To build:
-
-```
-$ npm install
-$ node-gyp build
-```
-
-To test:
-
-```
-$ npm run test
-```
-
-To test with gdb for debugging:
-```
-$ gdb --args node node_modules/.bin/_mocha -R spec test/index.test.js
-```
 
 ## License
 
