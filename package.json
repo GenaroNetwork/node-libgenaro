@@ -1,6 +1,6 @@
 {
   "name": "libgenaro",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Node.js library for encrypted file transfer on the Genaro network.",
   "main": "index.js",
   "scripts": {
