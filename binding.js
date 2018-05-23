@@ -6,8 +6,25 @@ const path = require('path');
 const basedir = path.resolve(__dirname);
 const libgenaro = require('./package.json').libgenaro;
 const basePath = libgenaro.basePath;
+const platform = process.platform;
 
-const libgenaroArchive = path.resolve(basedir, basePath + '/lib/libgenaro.a');
+let libgenaroArchives = path.resolve(basedir, basePath + '/lib/libgenaro.a');
+
+if(platform === 'win32'){
+  libgenaroArchives += ";" + path.resolve(basedir, basePath + '/lib/libgcc.a') + ";" + 
+    path.resolve(basedir, basePath + '/lib/libmsvcr110.a') + ";" + 
+    path.resolve(basedir, basePath + '/lib/libws2_32.a') + ";" + 
+    path.resolve(basedir, basePath + '/lib/libadvapi32.a') + ";" + 
+    path.resolve(basedir, basePath + '/lib/libcrypt32.a') + ";" + 
+    path.resolve(basedir, basePath + '/lib/libmingwex.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libnettle.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libgnutls.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libhogweed.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libjson-c.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libgmp.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libcurl.a');
+}
+
 const libgenaroIncludes = path.resolve(basedir, basePath + '/include');
 const depsIncludes = path.resolve(basedir, basePath + '/depends/include');
 

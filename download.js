@@ -8,24 +8,26 @@ const fs = require('fs');
 const basedir = path.resolve(__dirname);
 const libgenaro = require('./package.json').libgenaro;
 const releases = libgenaro.releases;
-
-let installed = true;
-try {
-  execSync('pkg-config --exists libgenaro');
-} catch (e) {
-  installed = false;
-}
-
-if (installed) {
-  stdout.write(`Skipping download of libgenaro, already installed.\n`);
-  process.exit(0);
-}
-
 const arch = process.arch;
 const platform = process.platform;
+
+if(platform !== 'win32'){
+  let installed = true;
+  try {
+    execSync('pkg-config --exists libgenaro');
+  } catch (e) {
+    installed = false;
+  }
+
+  if (installed) {
+    stdout.write(`Skipping download of libgenaro, already installed.\n`);
+    process.exit(0);
+  }
+}
+
 const baseUrl = libgenaro.baseUrl;
 const filePath = libgenaro.basePath;
-const filePathAbsolute = path.resolve(basedir, './' + filePath);
+let filePathAbsolute = path.resolve(basedir, './' + filePath);
 
 let checksum = null;
 let filename = null;
@@ -44,9 +46,8 @@ if (!filename) {
 }
 
 const url = baseUrl + '/' + filename;
-const target = path.resolve(basedir, './' + filename);
+let target = path.resolve(basedir, './' + filename);
 const download = `curl --location --fail --connect-timeout 120 --retry 3 -o "${target}" "${url}"`
-const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
 const hasher = `${sha256sum} ${target} | awk '{print $1}'`
 
 if (fs.existsSync(target)) {
@@ -66,8 +67,23 @@ if (hash === checksum) {
 }
 
 stdout.write(`Extracting target: ${target}\n`);
-execSync(`rm -rf ${filePathAbsolute}`);
-execSync(`mkdir ${filePathAbsolute}`);
-execSync(extract);
+
+if(platform !== 'win32'){
+  const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
+  execSync(`rm -rf ${filePathAbsolute}`);
+  execSync(`mkdir ${filePathAbsolute}`);
+  execSync(extract);
+}
+else{
+  target = target.replace(/\\/g, "/");
+  target = target.replace(/^([a-z]):/i, "/$1");
+  let tempFilePathAbsolute = filePathAbsolute.replace(/\\/g, "/");
+  filePathAbsolute = tempFilePathAbsolute.replace(/^([a-z]):/i, "/$1");
+
+  const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
+  execSync(`rm -rf ${tempFilePathAbsolute}`);
+  fs.mkdirSync(`${tempFilePathAbsolute}`);
+  execSync(extract);
+}
 
 process.exit(0);

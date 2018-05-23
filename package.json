@@ -63,6 +63,12 @@
         "platform": "darwin",
         "filename": "darwin.tar.gz",
         "checksum": "c86ddffe85efd9156e3c94bcd82924ba0be401fd03eaa1491b9cb02a0ec13713"
+      },
+      {
+        "arch": "x64",
+        "platform": "win32",
+        "filename": "win_x64.tar.gz",
+        "checksum": "\\8a2dc71b8aa25f5269ceb1b8ea622095b5c8077bed193f0ba6d4746109de5104"
       }
     ]
   }
