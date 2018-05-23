@@ -52,7 +52,7 @@ let status = 1;
 switch(cmd) {
   case 'libraries':
     status = 0;
-    stdout.write(installed ? '-lgenaro' : libgenaroArchive);
+    stdout.write(installed ? '-lgenaro' : libgenaroArchives);
     break;
   case 'include_dirs':
     status = 0;
