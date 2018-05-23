@@ -35,11 +35,11 @@ let status = 1;
 switch(cmd) {
   case 'libraries':
     status = 0;
-    stdout.write(installed ? '-lstorj' : libgenaroArchive);
+    stdout.write(installed ? '-lgenaro' : libgenaroArchive);
     break;
   case 'include_dirs':
     status = 0;
-    stdout.write(installed ? 'storj.h' : libgenaroIncludes);
+    stdout.write(installed ? 'genaro.h' : libgenaroIncludes);
     break;
   case 'include_dirs_deps':
     status = 0;
