@@ -11,7 +11,7 @@ const releases = libgenaro.releases;
 const arch = process.arch;
 const platform = process.platform;
 
-if(platform !== 'win32'){
+if (platform !== 'win32') {
   let installed = true;
   try {
     execSync('pkg-config --exists libgenaro');
@@ -70,20 +70,25 @@ if (hash === checksum) {
 
 stdout.write(`Extracting target: ${target}\n`);
 
-if(platform !== 'win32'){
+if (platform !== 'win32') {
   execSync(`rm -rf "${filePathAbsolute}"`);
   execSync(`mkdir "${filePathAbsolute}"`);
   execSync(extract);
-}
-else{
-  try{
+} else {
+  try {
     execSync(`rd /s/q "${filePathAbsolute}" >nul 2>&1`);
   } catch (e) {
     //empty
   }
+  
+  // use adm-zip package to extract zip file
+  stdout.write('Installing adm-zip package...\n');
+  execSync('npm install adm-zip@^0.4.11');
   var adm_zip = require('adm-zip');
   var unzip = new adm_zip(`${target}`);
   unzip.extractAllTo(`./${filePathAbsolute}`, true);
+  stdout.write('Uninstalling adm-zip package...\n');
+  execSync('npm uninstall adm-zip');
 }
 
 process.exit(0);
