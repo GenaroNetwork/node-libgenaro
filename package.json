@@ -67,8 +67,8 @@
       {
         "arch": "x64",
         "platform": "win32",
-        "filename": "win_x64.tar.gz",
-        "checksum": "\\8a2dc71b8aa25f5269ceb1b8ea622095b5c8077bed193f0ba6d4746109de5104"
+        "filename": "win_x64.zip",
+        "checksum": "f4b473c187aefe5d5abe093c554a3041da657a6ce9f74c5a30f4cd16d040e984"
       }
     ]
   }

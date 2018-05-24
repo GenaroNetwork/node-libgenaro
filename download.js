@@ -48,7 +48,9 @@ if (!filename) {
 const url = baseUrl + '/' + filename;
 let target = path.resolve(basedir, './' + filename);
 const download = `curl --location --fail --connect-timeout 120 --retry 3 -o "${target}" "${url}"`
-const hasher = `${sha256sum} ${target} | awk '{print $1}'`
+const hasher = (platform !== 'win32') ? `${sha256sum} ${target} | awk '{print $1}'` : 
+               `CertUtil -hashfile win_x64.zip SHA256 | findstr "^[0-9a-f]*$"`
+const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
 
 if (fs.existsSync(target)) {
   stdout.write(`Already downloaded libgenaro \n  at: ${target}\n`);
@@ -69,21 +71,19 @@ if (hash === checksum) {
 stdout.write(`Extracting target: ${target}\n`);
 
 if(platform !== 'win32'){
-  const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
-  execSync(`rm -rf ${filePathAbsolute}`);
-  execSync(`mkdir ${filePathAbsolute}`);
+  execSync(`rm -rf "${filePathAbsolute}"`);
+  execSync(`mkdir "${filePathAbsolute}"`);
   execSync(extract);
 }
 else{
-  target = target.replace(/\\/g, "/");
-  target = target.replace(/^([a-z]):/i, "/$1");
-  let tempFilePathAbsolute = filePathAbsolute.replace(/\\/g, "/");
-  filePathAbsolute = tempFilePathAbsolute.replace(/^([a-z]):/i, "/$1");
-
-  const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
-  execSync(`rm -rf ${tempFilePathAbsolute}`);
-  fs.mkdirSync(`${tempFilePathAbsolute}`);
-  execSync(extract);
+  try{
+    execSync(`rd /s/q "${filePathAbsolute}" >nul 2>&1`);
+  } catch (e) {
+    //empty
+  }
+  var adm_zip = require('adm-zip');
+  var unzip = new adm_zip(`${target}`);
+  unzip.extractAllTo(`./${filePathAbsolute}`, true);
 }
 
 process.exit(0);
