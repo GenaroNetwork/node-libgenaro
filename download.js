@@ -81,14 +81,25 @@ if (platform !== 'win32') {
     //empty
   }
   
-  // use adm-zip package to extract zip file
+  // install adm-zip package for extracting zip file
   stdout.write('Installing adm-zip package...\n');
-  execSync('npm install adm-zip@^0.4.11');
+  try {
+    execSync('npm install adm-zip@^0.4.11');
+  } catch (e) {
+    //empty
+  }
+  
   var adm_zip = require('adm-zip');
   var unzip = new adm_zip(`${target}`);
   unzip.extractAllTo(`./${filePathAbsolute}`, true);
+
+  // uninstall adm-zip package
   stdout.write('Uninstalling adm-zip package...\n');
-  execSync('npm uninstall adm-zip');
+  try {
+    execSync('npm uninstall adm-zip');
+  } catch (e) {
+    //empty
+  }
 }
 
 process.exit(0);
