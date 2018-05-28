@@ -2,6 +2,13 @@
 #include <node_buffer.h>
 #include <nan.h>
 #include <uv.h>
+
+//add on 2018.5.9
+#if defined(_WIN32)
+#include <io.h>
+#include <memory>
+#endif
+
 #include "genaro.h"
 
 using namespace v8;
@@ -474,6 +481,30 @@ void StateStatusErrorGetter(Local<String> property, const Nan::PropertyCallbackI
     info.GetReturnValue().Set(error);
 }
 
+//add on 2018.5.9
+#if defined(_WIN32)
+std::unique_ptr<char[]> EncodingConvert(const char* strIn, int sourceCodepage, int targetCodepage)
+{
+	int unicodeLen = MultiByteToWideChar(sourceCodepage, 0, strIn, -1, nullptr, 0);
+
+	wchar_t * pUnicode = new wchar_t[unicodeLen + 1];
+	memset(pUnicode, 0, (unicodeLen + 1) * sizeof(wchar_t));
+
+	MultiByteToWideChar(sourceCodepage, 0, strIn, -1, pUnicode, unicodeLen);
+
+	char * pTargetData = nullptr;
+	int targetLen = WideCharToMultiByte(targetCodepage, 0, pUnicode, -1, pTargetData, 0, nullptr, nullptr);
+
+	pTargetData = new char[targetLen + 1];
+	memset(pTargetData, 0, targetLen + 1);
+
+	WideCharToMultiByte(targetCodepage, 0, pUnicode, -1, pTargetData, targetLen, nullptr, nullptr);
+
+	delete[] pUnicode;
+	return std::unique_ptr<char[]>(pTargetData);
+}
+#endif
+
 void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
     if (args.Length() != 3)
@@ -513,7 +544,14 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
     const char *index = *index_str;
     const char *index_dup = strdup(index);
 
-    FILE *fd = fopen(file_path, "r");
+//convert to ANSI encoding on Win32, add on 2018.5.9
+#if defined(_WIN32)
+	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
+	file_path = u_p.get();
+#endif
+
+	FILE *fd = fopen(file_path, "r");
+
     if (!fd)
     {
         v8::Local<v8::String> msg = Nan::New("Unable to open file").ToLocalChecked();
@@ -679,6 +717,12 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
     }
 
     FILE *fd = NULL;
+
+//convert to ANSI encoding on Win32, add on 2018.5.9
+#if defined(_WIN32)
+	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
+	file_path = u_p.get();
+#endif
 
     if (access(file_path, F_OK) != -1)
     {
@@ -920,7 +964,8 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     Nan::MaybeLocal<v8::Object> maybeInstance;
     v8::Local<v8::Object> instance;
 
-    v8::Local<v8::Value> argv[] = {};
+    //v8::Local<v8::Value> argv[] = {};
+	v8::Local<v8::Value> *argv = 0;		//modified on 2018.5.9
     maybeInstance = Nan::NewInstance(constructor->GetFunction(), 0, argv);
 
     if (maybeInstance.IsEmpty())

@@ -8,24 +8,26 @@ const fs = require('fs');
 const basedir = path.resolve(__dirname);
 const libgenaro = require('./package.json').libgenaro;
 const releases = libgenaro.releases;
-
-let installed = true;
-try {
-  execSync('pkg-config --exists libgenaro');
-} catch (e) {
-  installed = false;
-}
-
-if (installed) {
-  stdout.write(`Skipping download of libgenaro, already installed.\n`);
-  process.exit(0);
-}
-
 const arch = process.arch;
 const platform = process.platform;
+
+if (platform !== 'win32') {
+  let installed = true;
+  try {
+    execSync('pkg-config --exists libgenaro');
+  } catch (e) {
+    installed = false;
+  }
+
+  if (installed) {
+    stdout.write(`Skipping download of libgenaro, already installed.\n`);
+    process.exit(0);
+  }
+}
+
 const baseUrl = libgenaro.baseUrl;
 const filePath = libgenaro.basePath;
-const filePathAbsolute = path.resolve(basedir, './' + filePath);
+let filePathAbsolute = path.resolve(basedir, './' + filePath);
 
 let checksum = null;
 let filename = null;
@@ -44,10 +46,11 @@ if (!filename) {
 }
 
 const url = baseUrl + '/' + filename;
-const target = path.resolve(basedir, './' + filename);
+let target = path.resolve(basedir, './' + filename);
 const download = `curl --location --fail --connect-timeout 120 --retry 3 -o "${target}" "${url}"`
+const hasher = (platform !== 'win32') ? `${sha256sum} ${target} | awk '{print $1}'` : 
+               `CertUtil -hashfile win_x64.zip SHA256 | findstr "^[0-9a-f]*$"`
 const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
-const hasher = `${sha256sum} ${target} | awk '{print $1}'`
 
 if (fs.existsSync(target)) {
   stdout.write(`Already downloaded libgenaro \n  at: ${target}\n`);
@@ -66,8 +69,41 @@ if (hash === checksum) {
 }
 
 stdout.write(`Extracting target: ${target}\n`);
-execSync(`rm -rf ${filePathAbsolute}`);
-execSync(`mkdir ${filePathAbsolute}`);
-execSync(extract);
+
+if (platform !== 'win32') {
+  execSync(`rm -rf "${filePathAbsolute}"`);
+  execSync(`mkdir "${filePathAbsolute}"`);
+  execSync(extract);
+} else {
+  try {
+    execSync(`rd /s/q "${filePathAbsolute}" >nul 2>&1`);
+  } catch (e) {
+    //empty
+  }
+  
+  // install adm-zip package for extracting zip file
+  let admZipInstalled = true;
+  stdout.write('Installing adm-zip package...\n');
+  try {
+    execSync('npm install adm-zip@^0.4.11');
+  } catch (e) {
+    admZipInstalled = false;
+    stdout.write('Failed to install adm-zip package!\n');
+  }
+  
+  var adm_zip = require('adm-zip');
+  var unzip = new adm_zip(`${target}`);
+  unzip.extractAllTo(`./${filePathAbsolute}`, true);
+
+  // uninstall adm-zip package
+  if (admZipInstalled) {
+    stdout.write('Uninstalling adm-zip package...\n');
+    try {
+      execSync('npm uninstall adm-zip');
+    } catch (e) {
+      stdout.write('Failed to uninstall adm-zip package!\n');
+    }
+  }
+}
 
 process.exit(0);

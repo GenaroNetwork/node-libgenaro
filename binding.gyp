@@ -23,7 +23,32 @@
             'CLANG_CXX_LANGUAGE_STANDARD':'c++11'
           }
         }
-      ]
+      ],
+	  ['OS=="win"', {
+	      'configurations': {
+			'Debug': {
+              'msvs_settings': {
+                'VCCLCompilerTool': {
+                  'RuntimeLibrary': 3
+                },
+				'VCLinkerTool': {
+				  'OutputFile': 'genaro.node'
+				}
+              }
+            },
+            'Release': {
+              'msvs_settings': {
+                'VCCLCompilerTool': {
+                  'RuntimeLibrary': 2
+                },
+				'VCLinkerTool': {
+				  'OutputFile': 'genaro.node'
+				}
+              }
+            }
+          }
+	    }
+	  ]
     ],
     'cflags_cc': [
     ],
