@@ -49,7 +49,7 @@ const url = baseUrl + '/' + filename;
 let target = path.resolve(basedir, './' + filename);
 const download = `curl --location --fail --connect-timeout 120 --retry 3 -o "${target}" "${url}"`
 const hasher = (platform !== 'win32') ? `${sha256sum} ${target} | awk '{print $1}'` : 
-               `CertUtil -hashfile win_x64.zip SHA256 | findstr "^[0-9a-f].*[0-9a-f]$"`
+               `CertUtil -hashfile ${filename} SHA256 | findstr "^[0-9a-f].*[0-9a-f]$"`
 const extract = `tar -xzf ${target} -C ${filePathAbsolute}`;
 
 if (fs.existsSync(target)) {
