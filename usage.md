@@ -64,7 +64,6 @@ let state = genaro.storeFile("6fc8272d415b72d4f114ceb1", "/Users/flowfire/Deskto
 // progressCallback 上传进度变化时的回调函数
 // finishCallback 上传结束后的回调函数
 ```
-c68c2ac4497bf85ed2690589
 
 查看文件列表
 ```js
