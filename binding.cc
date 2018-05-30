@@ -1081,7 +1081,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     proxy->persistent.Reset(persistent);
 
     // There is no guarantee that the free callback will be called
-    persistent.SetWeak(proxy, FreeEnvironmentCallback, WeakCallbackType::kParameter);
+    persistent.SetWeak(proxy, FreeEnvironmentCallback, v8::WeakCallbackType::kParameter);
     persistent.MarkIndependent();
     Nan::AdjustExternalMemory(sizeof(genaro_env_t));
 
