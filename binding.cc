@@ -121,33 +121,6 @@ void Timestamp(const v8::FunctionCallbackInfo<Value> &args)
     args.GetReturnValue().Set(timestamp_local);
 }
 
-void MnemonicCheck(const v8::FunctionCallbackInfo<Value> &args)
-{
-    Isolate *isolate = args.GetIsolate();
-
-    String::Utf8Value str(args[0]);
-    const char *mnemonic = *str;
-
-    bool mnemonic_check_result = genaro_mnemonic_check(mnemonic);
-    Local<Boolean> mnemonic_check_result_local = Boolean::New(isolate, mnemonic_check_result);
-
-    args.GetReturnValue().Set(mnemonic_check_result_local);
-}
-
-void MnemonicGenerate(const v8::FunctionCallbackInfo<Value> &args)
-{
-    Isolate *isolate = args.GetIsolate();
-
-    char *mnemonic_result = NULL;
-    int32_t strength = Nan::To<int32_t>(args[0]).FromJust();
-
-    genaro_mnemonic_generate(strength, &mnemonic_result);
-    Local<String> mnemonic_local = String::NewFromUtf8(isolate, mnemonic_result);
-
-    free(mnemonic_result);
-    args.GetReturnValue().Set(mnemonic_local);
-}
-
 void GetInfoCallback(uv_work_t *work_req, int status)
 {
     Nan::HandleScope scope;
@@ -863,35 +836,6 @@ void RegisterCallback(uv_work_t *work_req, int status)
     free(work_req);
 }
 
-void Register(const Nan::FunctionCallbackInfo<Value> &args)
-{
-    if (args.Length() != 3 || !args[2]->IsFunction())
-    {
-        return Nan::ThrowError("3 arguments expected and the third argument is expected to be a function");
-    }
-    if (args.This()->InternalFieldCount() != 1)
-    {
-        return Nan::ThrowError("Environment not available for instance");
-    }
-    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-    if (!env)
-    {
-        return Nan::ThrowError("Environment is not initialized");
-    }
-
-    String::Utf8Value str_email(args[0]);
-    const char *email = *str_email;
-    const char *email_dup = strdup(email);
-
-    String::Utf8Value str_passwd(args[1]);
-    const char *passwd = *str_passwd;
-    const char *passwd_dup = strdup(passwd);
-
-    Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
-
-    genaro_bridge_register(env, email_dup, passwd_dup, (void *)callback, RegisterCallback);
-}
-
 void DestroyEnvironment(const Nan::FunctionCallbackInfo<Value> &args)
 {
     if (args.This()->InternalFieldCount() != 1)
@@ -936,13 +880,10 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     v8::Local<v8::Object> options = args[0].As<v8::Object>();
 
     v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
-    v8::Local<v8::String> bridgeUser = options->Get(Nan::New("bridgeUser").ToLocalChecked()).As<v8::String>();
-    v8::Local<v8::String> bridgePass = options->Get(Nan::New("bridgePass").ToLocalChecked()).As<v8::String>();
-    v8::Local<v8::String> encryptionKey = options->Get(Nan::New("encryptionKey").ToLocalChecked()).As<v8::String>();
+    v8::Local<v8::String> key_file = options->Get(Nan::New("keyFile").ToLocalChecked()).As<v8::String>();
+    v8::Local<v8::String> passphrase = options->Get(Nan::New("passphrase").ToLocalChecked()).As<v8::String>();
     Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
     Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
-    Nan::MaybeLocal<Value> bridgeApiKey = options->Get(Nan::New("bridgeApiKey").ToLocalChecked());
-    Nan::MaybeLocal<Value> bridgeSecretKey = options->Get(Nan::New("bridgeSecretKey").ToLocalChecked());
 
     v8::Local<v8::FunctionTemplate> constructor = Nan::New<v8::FunctionTemplate>();
     constructor->SetClassName(Nan::New("Environment").ToLocalChecked());
@@ -959,7 +900,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     Nan::SetPrototypeMethod(constructor, "resolveFileCancel", ResolveFileCancel);
     Nan::SetPrototypeMethod(constructor, "deleteFile", DeleteFile);
     Nan::SetPrototypeMethod(constructor, "destroy", DestroyEnvironment);
-    Nan::SetPrototypeMethod(constructor, "register", Register);
 
     Nan::MaybeLocal<v8::Object> maybeInstance;
     v8::Local<v8::Object> instance;
@@ -998,25 +938,27 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     }
 
     // V8 types to C types
-
-    String::Utf8Value _bridgeUser(bridgeUser);
-    const char *user = *_bridgeUser;
-    String::Utf8Value _bridgePass(bridgePass);
-    const char *pass = *_bridgePass;
-    String::Utf8Value _encryptionKey(encryptionKey);
-    const char *mnemonic = *_encryptionKey;
-
+    String::Utf8Value _keyFileObj(key_file);
+    const char *_key_file = *_keyFileObj;
+    String::Utf8Value _passphraseObj(passphrase);
+    const char *_passphrase = *_passphraseObj;
     // Setup option structs
 
     genaro_bridge_options_t bridge_options = {};
     bridge_options.proto = proto;
     bridge_options.host = host;
     bridge_options.port = port;
-    bridge_options.user = user;
-    bridge_options.pass = pass;
 
-    genaro_encrypt_options_t encrypt_options = {};
-    encrypt_options.mnemonic = mnemonic;
+    json_object *key_json_obj = json_tokener_parse(_key_file);
+    key_result_t *key_result = genaro_parse_key_file(key_json_obj, _passphrase);
+    if (key_result == NULL)
+    {
+        json_object_put(key_json_obj);
+        return Nan::ThrowError("Key file and passphrase mismatch.");
+    }
+    genaro_encrypt_options_t encrypt_options;
+    genaro_key_result_to_encrypt_options(key_result, &encrypt_options);
+    json_object_put(key_json_obj);
 
     genaro_http_options_t http_options = {};
     if (!user_agent.ToLocalChecked()->IsNullOrUndefined())
@@ -1041,26 +983,13 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
         log_options.level = To<int>(logLevel.ToLocalChecked()).FromJust();
     }
 
-    if (!bridgeApiKey.ToLocalChecked()->IsNullOrUndefined() && !bridgeSecretKey.ToLocalChecked()->IsNullOrUndefined())
-    {
-        String::Utf8Value _bridgeApiKey(bridgeApiKey.ToLocalChecked());
-        bridge_options.apikey = strdup(*_bridgeApiKey);
-
-        String::Utf8Value _bridgeSecretKey(bridgeSecretKey.ToLocalChecked());
-        bridge_options.secretkey = strdup(*_bridgeSecretKey);
-    }
-    else
-    {
-        bridge_options.apikey = NULL;
-        bridge_options.secretkey = NULL;
-    }
-
     // Initialize environment
 
     genaro_env_t *env = genaro_init_env(&bridge_options,
                                         &encrypt_options,
                                         &http_options,
                                         &log_options);
+    free(encrypt_options.priv_key);
 
     if (!env)
     {
@@ -1092,8 +1021,6 @@ void init(Handle<Object> exports)
 {
     NODE_SET_METHOD(exports, "Environment", Environment);
     NODE_SET_METHOD(exports, "utilTimestamp", Timestamp);
-    NODE_SET_METHOD(exports, "mnemonicCheck", MnemonicCheck);
-    NODE_SET_METHOD(exports, "mnemonicGenerate", MnemonicGenerate);
 }
 
 NODE_MODULE(genaro, init);

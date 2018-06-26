@@ -29,6 +29,9 @@ const libgenaroIncludes = path.resolve(basedir, basePath + '/include');
 const depsIncludes = path.resolve(basedir, basePath + '/depends/include');
 
 let archives = [
+  '/lib/libkeccak.a',
+  '/lib/libscrypt.a',
+  '/lib/libsecp256k1.a',
   '/depends/lib/libnettle.a',
   '/depends/lib/libgnutls.a',
   '/depends/lib/libhogweed.a',
