@@ -33,7 +33,7 @@ let checksum = null;
 let filename = null;
 let sha256sum = (platform === 'darwin') ? 'shasum -a 256' : 'sha256sum';
 
-for (var i = 0; i < releases.length; i++) {
+for (let i = 0; i < releases.length; i++) {
   if (releases[i].arch === arch && releases[i].platform === platform) {
     filename = releases[i].filename;
     checksum = releases[i].checksum;
@@ -80,7 +80,7 @@ if (platform !== 'win32') {
   } catch (e) {
     //empty
   }
-  
+ 
   // install adm-zip package for extracting zip file
   let admZipInstalled = true;
   stdout.write('Installing adm-zip package...\n');
@@ -91,8 +91,8 @@ if (platform !== 'win32') {
     stdout.write('Failed to install adm-zip package!\n');
   }
   
-  var adm_zip = require('adm-zip');
-  var unzip = new adm_zip(`${target}`);
+  const adm_zip = require('adm-zip');
+  const unzip = new adm_zip(`${target}`);
   unzip.extractAllTo(`./${filePathAbsolute}`, true);
 
   // uninstall adm-zip package

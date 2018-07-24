@@ -200,7 +200,7 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
     if (error_and_status_check<get_buckets_request_t>(req, &error))
     {
         Local<Array> buckets_array = Nan::New<Array>();
-        for (uint8_t i = 0; i < req->total_buckets; i++)
+        for (uint32_t i = 0; i < req->total_buckets; i++)
         {
             Local<Object> bucket = Nan::New<Object>();
             bucket->Set(Nan::New("name").ToLocalChecked(), Nan::New(req->buckets[i].name).ToLocalChecked());
@@ -255,7 +255,7 @@ void ListFilesCallback(uv_work_t *work_req, int status)
     if (error_and_status_check<list_files_request_t>(req, &error))
     {
         Local<Array> files_array = Nan::New<Array>();
-        for (uint8_t i = 0; i < req->total_files; i++)
+        for (uint32_t i = 0; i < req->total_files; i++)
         {
             Local<Object> file = Nan::New<Object>();
             file->Set(Nan::New("filename").ToLocalChecked(), Nan::New(req->files[i].filename).ToLocalChecked());
