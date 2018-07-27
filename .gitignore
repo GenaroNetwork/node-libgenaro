@@ -5,6 +5,7 @@ node_modules/*
 *.log
 *.log.*
 .idea/*
+.vscode/*
 genaro-test-download.data
 genaro-test-upload.data
 libgenaro-*
