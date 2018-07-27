@@ -513,8 +513,14 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
     const char *file_name = *file_name_str;
     const char *file_name_dup = strdup(file_name);
 
-    String::Utf8Value index_str(options->Get(Nan::New("index").ToLocalChecked()).As<v8::String>());
-    const char *index = *index_str;
+    //2018.7.27: index is used for encryption
+    Nan::MaybeLocal<Value> indexOption = options->Get(Nan::New("index").ToLocalChecked());
+    char *index = (char *)"";
+    if (!indexOption.ToLocalChecked()->IsNullOrUndefined())
+    {
+        String::Utf8Value index_str(indexOption.ToLocalChecked());
+        index = *index_str;
+    }
     const char *index_dup = strdup(index);
 
 //convert to ANSI encoding on Win32, add on 2018.5.9
