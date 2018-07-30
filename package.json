@@ -49,7 +49,7 @@
     "mocha": "^3.4.2"
   },
   "libgenaro": {
-    "basePath": "./libgenaro-2.0.0-alpha.0",
+    "basePath": "./libgenaro-2.0.0-alpha.1",
     "baseUrl": "https://github.com/GenaroNetwork/libgenaro/releases/download/2.0.0-alpha.0",
     "releases": [
       {
@@ -62,7 +62,7 @@
         "arch": "x64",
         "platform": "darwin",
         "filename": "darwin.tar.gz",
-        "checksum": "b6aa6244a77380a260c51c9e555537ae9b009a05bff18d0e0452d52df01bb3e5"
+        "checksum": "dc51cc9445fe1d6776eca97c6e445b781cf6db4769618ccbcd7caad6d2228a7a"
       },
       {
         "arch": "x64",
