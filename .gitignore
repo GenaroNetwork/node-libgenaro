@@ -8,4 +8,4 @@ node_modules/*
 .vscode/*
 genaro-test-download.data
 genaro-test-upload.data
-libgenaro-*
+libgenaro*

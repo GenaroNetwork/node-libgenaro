@@ -1,6 +1,6 @@
 {
   "name": "libgenaro",
-  "version": "2.0.0-alpha.4",
+  "version": "2.0.0-alpha.5",
   "description": "Node.js library for encrypted file transfer on the Genaro network.",
   "main": "index.js",
   "scripts": {
@@ -39,7 +39,7 @@
   "homepage": "https://github.com/GenaroNetwork/node-libgenaro#readme",
   "dependencies": {
     "bindings": "^1.2.1",
-    "nan": "^2.6.2"
+    "nan": "^2.10.0"
   },
   "devDependencies": {
     "basic-auth": "^2.0.0",
@@ -49,7 +49,7 @@
     "mocha": "^3.4.2"
   },
   "libgenaro": {
-    "basePath": "./libgenaro-2.0.0-alpha.1",
+    "basePath": "./libgenaro",
     "baseUrl": "https://github.com/GenaroNetwork/libgenaro/releases/download/2.0.0-alpha.1",
     "releases": [
       {
