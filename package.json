@@ -50,7 +50,7 @@
   },
   "libgenaro": {
     "basePath": "./libgenaro-2.0.0-alpha.1",
-    "baseUrl": "https://github.com/GenaroNetwork/libgenaro/releases/download/2.0.0-alpha.0",
+    "baseUrl": "https://github.com/GenaroNetwork/libgenaro/releases/download/2.0.0-alpha.1",
     "releases": [
       {
         "arch": "x64",
