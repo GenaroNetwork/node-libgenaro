@@ -13,7 +13,7 @@
       'binding.cc',
     ],
     'conditions': [
-        ['OS=="mac"', {
+      ['OS=="mac"', {
           'xcode_settings': {
             'MACOSX_DEPLOYMENT_TARGET': '10.9',
             'OTHER_LDFLAGS': [
@@ -24,31 +24,30 @@
           }
         }
       ],
-	  ['OS=="win"', {
+	    ['OS=="win"', {
 	      'configurations': {
-			'Debug': {
-              'msvs_settings': {
-                'VCCLCompilerTool': {
-                  'RuntimeLibrary': 3
-                },
-				'VCLinkerTool': {
-				  'OutputFile': 'genaro.node'
-				}
-              }
-            },
-            'Release': {
-              'msvs_settings': {
-                'VCCLCompilerTool': {
-                  'RuntimeLibrary': 2
-                },
-				'VCLinkerTool': {
-				  'OutputFile': 'genaro.node'
-				}
-              }
+			    'Debug': {
+            'msvs_settings': {
+              'VCCLCompilerTool': {
+                'RuntimeLibrary': 3
+               },
+				      'VCLinkerTool': {
+				        'OutputFile': 'genaro.node'
+				      }
+            }
+          },
+          'Release': {
+            'msvs_settings': {
+              'VCCLCompilerTool': {
+                'RuntimeLibrary': 2
+              },
+				      'VCLinkerTool': {
+				        'OutputFile': 'genaro.node'
+				      }
             }
           }
-	    }
-	  ]
+        }
+	    }]
     ],
     'cflags_cc': [
     ],
