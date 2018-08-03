@@ -534,6 +534,7 @@ std::unique_ptr<char[]> EncodingConvert(const char* strIn, int sourceCodepage, i
 
 void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
+try{
     if (args.Length() != 3)
     {
         return Nan::ThrowError("Unexpected arguments");
@@ -641,6 +642,10 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
                      StateStatusErrorGetter<genaro_upload_state_t>);
 
     args.GetReturnValue().Set(state_local);
+}catch(...)
+{
+    //do nothing
+}
 }
 
 void StoreFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
