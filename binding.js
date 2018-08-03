@@ -11,7 +11,9 @@ const platform = process.platform;
 let libgenaroArchives = path.resolve(basedir, basePath + '/lib/libgenaro.a');
 
 if(platform === 'win32'){
-  libgenaroArchives += ";" + path.resolve(basedir, basePath + '/lib/libgcc.a') + ";" + 
+  libgenaroArchives += ";" + 
+    path.resolve(basedir, basePath + '/lib/libkernel32.a') + ";" + 
+    path.resolve(basedir, basePath + '/lib/libgcc.a') + ";" + 
     path.resolve(basedir, basePath + '/lib/libmsvcr110.a') + ";" + 
     path.resolve(basedir, basePath + '/lib/libws2_32.a') + ";" + 
     path.resolve(basedir, basePath + '/lib/libadvapi32.a') + ";" + 
@@ -22,7 +24,10 @@ if(platform === 'win32'){
     path.resolve(basedir, basePath + '/depends/lib/libhogweed.a') + ";" + 
     path.resolve(basedir, basePath + '/depends/lib/libjson-c.a') + ";" + 
     path.resolve(basedir, basePath + '/depends/lib/libgmp.a') + ";" + 
-    path.resolve(basedir, basePath + '/depends/lib/libcurl.a');
+    path.resolve(basedir, basePath + '/depends/lib/libcurl.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libkeccak.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libscrypt.a') + ";" + 
+    path.resolve(basedir, basePath + '/depends/lib/libsecp256k1.a');
 }
 
 const libgenaroIncludes = path.resolve(basedir, basePath + '/include');
