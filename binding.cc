@@ -534,7 +534,6 @@ std::unique_ptr<char[]> EncodingConvert(const char* strIn, int sourceCodepage, i
 
 void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
-try{
     if (args.Length() != 3)
     {
         return Nan::ThrowError("Unexpected arguments");
@@ -616,11 +615,24 @@ try{
     upload_opts.file_name = file_name_dup;
     upload_opts.fd = fd;
 
-    genaro_upload_state_t *state = genaro_bridge_store_file(env,
-                                                            &upload_opts,
-                                                            (void *)upload_callbacks,
-                                                            StoreFileProgressCallback,
-                                                            StoreFileFinishedCallback);
+    genaro_upload_state_t *state;
+    try{
+        state = genaro_bridge_store_file(env, &upload_opts,
+                                         (void *)upload_callbacks,
+                                         StoreFileProgressCallback,
+                                         StoreFileFinishedCallback);
+    }catch(...)  // exception handle can not work on LLVM/Clang(MacOS)
+    {
+        v8::Local<v8::String> msg = Nan::New("Error Occurred On Uploading!").ToLocalChecked();
+        v8::Local<v8::Value> error = Nan::Error(msg);
+        
+        Local<Value> argv[] = {
+            error,
+            Nan::Null()};
+        
+        upload_callbacks->finished_callback->Call(2, argv);
+        return;
+    }
 
     if (!state)
     {
@@ -642,10 +654,6 @@ try{
                      StateStatusErrorGetter<genaro_upload_state_t>);
 
     args.GetReturnValue().Set(state_local);
-}catch(...)
-{
-    //do nothing
-}
 }
 
 void StoreFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
