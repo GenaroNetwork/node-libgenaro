@@ -473,7 +473,12 @@ void StoreFileFinishedCallback(int status, char *file_id, void *handle)
         error,
         file_id_local};
 
+    Nan::TryCatch tc;
     callback->Call(2, argv);
+    if (tc.HasCaught()) {
+       printf("Nan::TryCatch: catch an exception in StoreFileFinishedCallback\n");
+    }
+
     if (file_id)
     {
         free(file_id);
@@ -496,7 +501,11 @@ void StoreFileProgressCallback(double progress, uint64_t downloaded_bytes, uint6
         downloaded_bytes_local,
         total_bytes_local};
 
+    Nan::TryCatch tc;
     callback->Call(3, argv);
+    if (tc.HasCaught()) {
+       printf("Nan::TryCatch: catch an exception in StoreFileProgressCallback\n");
+    }
 }
 
 template <class StateType>
