@@ -1,6 +1,6 @@
 {
   "name": "libgenaro",
-  "version": "2.0.0-alpha.14",
+  "version": "2.0.0-alpha.15",
   "description": "Node.js library for encrypted file transfer on the Genaro network.",
   "main": "index.js",
   "scripts": {
@@ -68,7 +68,7 @@
         "arch": "x64",
         "platform": "win32",
         "filename": "win_x64.zip",
-        "checksum": "9048d1b9fdbbf05a873c59f93fb3c68c8e3a2c7ab6f0f22a897e774ccaecb03f"
+        "checksum": "983ee19ea112f89e677d903d6bc649b6276331e5e03be90be121a746b4d5efd4"
       }
     ]
   }
