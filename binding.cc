@@ -628,24 +628,11 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
     upload_opts.fd = fd;
 
     genaro_upload_state_t *state;
-    try{
-        state = genaro_bridge_store_file(env, &upload_opts,
-                                         (void *)upload_callbacks,
-                                         StoreFileProgressCallback,
-                                         StoreFileFinishedCallback);
-    }catch(...)  // exception handle can not work on LLVM/Clang(MacOS)
-    {
-        v8::Local<v8::String> msg = Nan::New("Error Occurred On Uploading!").ToLocalChecked();
-        v8::Local<v8::Value> error = Nan::Error(msg);
-        
-        Local<Value> argv[] = {
-            error,
-            Nan::Null()};
 
-        upload_callbacks->finished_callback->Call(2, argv);
-        
-        return;
-    }
+    state = genaro_bridge_store_file(env, &upload_opts,
+                                        (void *)upload_callbacks,
+                                        StoreFileProgressCallback,
+                                        StoreFileFinishedCallback);
 
     if (!state)
     {
@@ -896,6 +883,30 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
     genaro_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *)callback, DeleteFileCallback);
 }
 
+void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
+{
+    if (args.Length() != 1)
+    {
+        return Nan::ThrowError("Unexpected arguments");
+    }
+    if (args.This()->InternalFieldCount() != 1)
+    {
+        return Nan::ThrowError("Environment not available for instance");
+    }
+
+    genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+    if (!env)
+    {
+        return Nan::ThrowError("Environment is not initialized");
+    }
+
+    String::Utf8Value encrypted_name_str(args[0]);
+    const char *encrypted_name = *encrypted_name_str;
+    const char *encrypted_name_dup = strdup(encrypted_name);
+
+    char *decrypted_name = genaro_bridge_decrypt_meta(env, encrypted_name_dup);
+}
+
 void RegisterCallback(uv_work_t *work_req, int status)
 {
     Nan::HandleScope scope;
@@ -993,6 +1004,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     Nan::SetPrototypeMethod(constructor, "resolveFile", ResolveFile);
     Nan::SetPrototypeMethod(constructor, "resolveFileCancel", ResolveFileCancel);
     Nan::SetPrototypeMethod(constructor, "deleteFile", DeleteFile);
+    Nan::SetPrototypeMethod(constructor, "decryptMeta", DecryptMeta);
     Nan::SetPrototypeMethod(constructor, "destroy", DestroyEnvironment);
 
     Nan::MaybeLocal<v8::Object> maybeInstance;
