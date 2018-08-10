@@ -148,11 +148,7 @@ void GetInfoCallback(uv_work_t *work_req, int status)
         error,
         result};
 
-    Nan::TryCatch tc;
     callback->Call(2, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in GetInfoCallback\n");
-    }
 
     free(req);
     free(work_req);
@@ -225,11 +221,7 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
         error,
         buckets_value};
 
-    Nan::TryCatch tc;
     callback->Call(2, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in GetBucketsCallback\n");
-    }
 
     free(req);
     free(work_req);
@@ -286,12 +278,8 @@ void ListFilesCallback(uv_work_t *work_req, int status)
     Local<Value> argv[] = {
         error,
         files_value};
-    
-    Nan::TryCatch tc;
+
     callback->Call(2, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in ListFilesCallback\n");
-    }
 
     free(req);
     free(work_req);
@@ -347,11 +335,7 @@ void CreateBucketCallback(uv_work_t *work_req, int status)
         error,
         bucket_value};
 
-    Nan::TryCatch tc;
     callback->Call(2, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in CreateBucketCallback\n");
-    }
 
     free(req);
     free(work_req);
@@ -397,11 +381,7 @@ void DeleteBucketCallback(uv_work_t *work_req, int status)
     Local<Value> argv[] = {
         error};
 
-    Nan::TryCatch tc;
     callback->Call(1, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in DeleteBucketCallback\n");
-    }
 
     free(req);
     free(work_req);
@@ -447,12 +427,8 @@ void RenameBucketCallback(uv_work_t *work_req, int status)
 
     Local<Value> argv[] = {
         error};
-    
-    Nan::TryCatch tc;
+
     callback->Call(1, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in RenameBucketCallback\n");
-    }
     
     free(req);
     free(work_req);
@@ -507,11 +483,7 @@ void StoreFileFinishedCallback(int status, char *file_id, void *handle)
         error,
         file_id_local};
 
-    Nan::TryCatch tc;
     callback->Call(2, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in StoreFileFinishedCallback\n");
-    }
 
     if (file_id)
     {
@@ -535,11 +507,7 @@ void StoreFileProgressCallback(double progress, uint64_t downloaded_bytes, uint6
         downloaded_bytes_local,
         total_bytes_local};
 
-    Nan::TryCatch tc;
     callback->Call(3, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in StoreFileProgressCallback\n");
-    }
 }
 
 template <class StateType>
@@ -637,11 +605,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
             error,
             Nan::Null()};
 
-        Nan::TryCatch tc;
         upload_callbacks->finished_callback->Call(2, argv);
-        if (tc.HasCaught()) {
-            printf("Nan::TryCatch: catch an exception in StoreFile\n");
-        }
 
         return;
     }
@@ -678,11 +642,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
             error,
             Nan::Null()};
 
-        Nan::TryCatch tc;
         upload_callbacks->finished_callback->Call(2, argv);
-        if (tc.HasCaught()) {
-            printf("Nan::TryCatch: catch an exception in StoreFileProgressCallback\n");
-        }
         
         return;
     }
@@ -747,11 +707,7 @@ void ResolveFileFinishedCallback(int status, FILE *fd, void *handle)
     Local<Value> argv[] = {
         error};
 
-    Nan::TryCatch tc;
     callback->Call(1, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in ResolveFileFinishedCallback\n");
-    }
 }
 
 void ResolveFileProgressCallback(double progress,
@@ -773,11 +729,7 @@ void ResolveFileProgressCallback(double progress,
         downloaded_bytes_local,
         total_bytes_local};
 
-    Nan::TryCatch tc;
     callback->Call(3, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in ResolveFileProgressCallback\n");
-    }
 }
 
 void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
@@ -844,11 +796,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
             Local<Value> argv[] = {
                 error};
 
-            Nan::TryCatch tc;
             download_callbacks->finished_callback->Call(1, argv);
-            if (tc.HasCaught()) {
-                printf("Nan::TryCatch: catch an exception in ResolveFile\n");
-            }
 
             return;
         }
@@ -863,11 +811,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
         Local<Value> argv[] = {
             error};
 
-        Nan::TryCatch tc;
         download_callbacks->finished_callback->Call(1, argv);
-        if (tc.HasCaught()) {
-            printf("Nan::TryCatch: catch an exception in ResolveFile\n");
-        }
         
         return;
     }
@@ -916,11 +860,7 @@ void DeleteFileCallback(uv_work_t *work_req, int status)
     Local<Value> argv[] = {
         error};
 
-    Nan::TryCatch tc;
     callback->Call(1, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in DeleteFileCallback\n");
-    }
 
     free(req);
     free(work_req);
@@ -983,11 +923,7 @@ void RegisterCallback(uv_work_t *work_req, int status)
         error,
         result};
 
-    Nan::TryCatch tc;
     callback->Call(2, argv);
-    if (tc.HasCaught()) {
-       printf("Nan::TryCatch: catch an exception in RegisterCallback\n");
-    }
 
     free(req);
     free(work_req);
