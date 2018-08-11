@@ -905,6 +905,11 @@ void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
     const char *encrypted_name_dup = strdup(encrypted_name);
 
     char *decrypted_name = genaro_bridge_decrypt_meta(env, encrypted_name_dup);
+
+    if(decrypted_name)
+    {
+        args.GetReturnValue().Set(Nan::New(decrypted_name).ToLocalChecked());
+    }
 }
 
 void RegisterCallback(uv_work_t *work_req, int status)
