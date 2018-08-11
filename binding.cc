@@ -883,7 +883,7 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
     genaro_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *)callback, DeleteFileCallback);
 }
 
-void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
+void DecryptName(const Nan::FunctionCallbackInfo<Value> &args)
 {
     if (args.Length() != 1)
     {
@@ -904,7 +904,7 @@ void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
     const char *encrypted_name = *encrypted_name_str;
     const char *encrypted_name_dup = strdup(encrypted_name);
 
-    char *decrypted_name = genaro_bridge_decrypt_meta(env, encrypted_name_dup);
+    char *decrypted_name = genaro_bridge_decrypt_name(env, encrypted_name_dup);
 
     if(decrypted_name)
     {
@@ -1010,7 +1010,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
     Nan::SetPrototypeMethod(constructor, "resolveFile", ResolveFile);
     Nan::SetPrototypeMethod(constructor, "resolveFileCancel", ResolveFileCancel);
     Nan::SetPrototypeMethod(constructor, "deleteFile", DeleteFile);
-    Nan::SetPrototypeMethod(constructor, "decryptMeta", DecryptMeta);
+    Nan::SetPrototypeMethod(constructor, "decryptName", DecryptName);
     Nan::SetPrototypeMethod(constructor, "destroy", DestroyEnvironment);
 
     Nan::MaybeLocal<v8::Object> maybeInstance;
