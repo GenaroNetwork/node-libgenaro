@@ -908,6 +908,7 @@ void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
 
     if(decrypted_name)
     {
+        // return the decrypted name to nodejs.
         args.GetReturnValue().Set(Nan::New(decrypted_name).ToLocalChecked());
     }
 }
