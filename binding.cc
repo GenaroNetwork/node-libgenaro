@@ -491,7 +491,7 @@ void StoreFileFinishedCallback(int status, char *file_id, void *handle)
     }
 }
 
-void StoreFileProgressCallback(double progress, uint64_t downloaded_bytes, uint64_t total_bytes, void *handle)
+void StoreFileProgressCallback(double progress, uint64_t uploaded_bytes, uint64_t total_bytes, void *handle)
 {
     Nan::HandleScope scope;
 
@@ -499,12 +499,12 @@ void StoreFileProgressCallback(double progress, uint64_t downloaded_bytes, uint6
     Nan::Callback *callback = upload_callbacks->progress_callback;
 
     Local<Number> progress_local = Nan::New(progress);
-    Local<Number> downloaded_bytes_local = Nan::New((double)downloaded_bytes);
+    Local<Number> uploaded_bytes_local = Nan::New((double)uploaded_bytes);
     Local<Number> total_bytes_local = Nan::New((double)total_bytes);
 
     Local<Value> argv[] = {
         progress_local,
-        downloaded_bytes_local,
+        uploaded_bytes_local,
         total_bytes_local};
 
     callback->Call(3, argv);
