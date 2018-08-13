@@ -491,7 +491,7 @@ void StoreFileFinishedCallback(int status, char *file_id, void *handle)
     }
 }
 
-void StoreFileProgressCallback(double progress, uint64_t uploaded_bytes, uint64_t total_bytes, void *handle)
+/*void StoreFileProgressCallback(double progress, uint64_t uploaded_bytes, uint64_t total_bytes, void *handle)
 {
     Nan::HandleScope scope;
 
@@ -508,6 +508,23 @@ void StoreFileProgressCallback(double progress, uint64_t uploaded_bytes, uint64_
         total_bytes_local};
 
     callback->Call(3, argv);
+}*/
+
+void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
+{
+    Nan::HandleScope scope;
+
+    transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *)handle;
+    Nan::Callback *callback = upload_callbacks->progress_callback;
+
+    Local<Number> progress_local = Nan::New(progress);
+    Local<Number> file_bytes_local = Nan::New((double)file_bytes);
+
+    Local<Value> argv[] = {
+        progress_local,
+        file_bytes_local};
+
+    callback->Call(2, argv);
 }
 
 template <class StateType>

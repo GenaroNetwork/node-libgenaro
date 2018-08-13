@@ -37,7 +37,7 @@ const filePath = './test-upload.data';
 
 const state = libgenaro.storeFile(bucketId, filePath, {
   filename: 'test-upload.data',
-  progressCallback: function(progress, downloadedBytes, totalBytes) {
+  progressCallback: function(progress, fileBytes) {
     console.log('progress:', progress);
   },
   finishedCallback: function(err, fileId) {
