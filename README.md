@@ -58,7 +58,7 @@ const fileId = '998960317b6725a3f8080c2b';
 const downloadFilePath = './test-download.data';
 
 const state = libgenaro.resolveFile(bucketId, fileId, downloadFilePath, {
-  progressCallback: function(progress, downloadedBytes, totalBytes) {
+  progressCallback: function(progress, fileBytes) {
     console.log('progress:', progress)
   },
   finishedCallback: function(err) {

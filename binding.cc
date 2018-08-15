@@ -888,10 +888,7 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 	callback->Call(1, argv);
 }
 
-void ResolveFileProgressCallback(double progress,
-	uint64_t downloaded_bytes,
-	uint64_t total_bytes,
-	void *handle)
+void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
 {
 	Nan::HandleScope scope;
 
@@ -899,15 +896,13 @@ void ResolveFileProgressCallback(double progress,
 	Nan::Callback *callback = download_callbacks->progress_callback;
 
 	Local<Number> progress_local = Nan::New(progress);
-	Local<Number> downloaded_bytes_local = Nan::New((double)downloaded_bytes);
-	Local<Number> total_bytes_local = Nan::New((double)total_bytes);
+	Local<Number> file_bytes_local = Nan::New((double)file_bytes);
 
 	Local<Value> argv[] = {
 		progress_local,
-		downloaded_bytes_local,
-		total_bytes_local };
+		file_bytes_local };
 
-	callback->Call(3, argv);
+	callback->Call(2, argv);
 }
 
 void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
