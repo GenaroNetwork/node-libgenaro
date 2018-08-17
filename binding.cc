@@ -2,6 +2,7 @@
 #include <node_buffer.h>
 #include <nan.h>
 #include <uv.h>
+#include <list>
 
 #if defined(_WIN32)
 #include <io.h>
@@ -27,13 +28,34 @@ typedef struct
 	Nan::Callback *finished_callback;
 } transfer_callbacks_t;
 
+typedef struct uploading_task
+{
+	const char *bucket_id;
+	const char *file_name;
+} uploading_task_t;
+
+typedef std::list<uploading_task_t> uploading_task_list_t;
+
+// the current uploading tasks.
+static uploading_task_list_t uploading_task_list;
+
+typedef struct downloading_task
+{
+	const char *full_path;
+} downloading_task_t;
+
+typedef std::list<downloading_task_t> downloading_task_list_t;
+
+// the current downloading tasks.
+static downloading_task_list_t downloading_task_list;
+
 extern "C" void JsonLogger(const char *message, int level, void *handle)
 {
 	printf("{\"message\": \"%s\", \"level\": %i, \"timestamp\": %" PRIu64 "}\n",
 		message, level, genaro_util_timestamp());
 }
 
-static char *str_concat_many(int count, ...)
+char *str_concat_many(int count, ...)
 {
 	int length = 1;
 
@@ -60,7 +82,7 @@ static char *str_concat_many(int count, ...)
 	return combined;
 }
 
-static char *RetriveNewName(const char *fileName, const char *extra)
+char *RetriveNewName(const char *fileName, const char *extra)
 {
 	if (fileName == NULL || strlen(fileName) == 0)
 	{
@@ -119,6 +141,32 @@ static char *RetriveNewName(const char *fileName, const char *extra)
 	free(right_name);
 
 	return retName;
+}
+
+const char *ConvertToWindowsPath(const char *path)
+{
+	if (path == NULL)
+	{
+		return NULL;
+	}
+
+	int len = strlen(path);
+	char *retPath = (char *)malloc((len + 1) * sizeof(char));
+
+	for (int i = 0; i < len; i++)
+	{
+		if (path[i] != '/')
+		{
+			retPath[i] = path[i];
+		}
+		else
+		{
+			retPath[i] = '\\';
+		}
+	}
+	retPath[len] = '\0';
+
+	return retPath;
 }
 
 Local<Value> IntToGenaroError(int error_code)
@@ -553,9 +601,109 @@ void RenameBucket(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_bridge_rename_bucket(env, id_dup, name_dup, (void *)callback, RenameBucketCallback);
 }
 
-void StoreFileFinishedCallback(int status, char *file_id, void *handle)
+void RemoveUploadingTask(const char *bucket_id, const char *file_name)
+{
+	uploading_task_list_t::iterator iter = uploading_task_list.begin();
+
+	while (iter != uploading_task_list.end())
+	{
+		if (!strcmp(iter->file_name, file_name) &&
+			!strcmp(iter->bucket_id, bucket_id))
+		{
+			free((char *)iter->bucket_id);
+			free((char *)iter->file_name);
+			uploading_task_list.erase(iter);
+			return;
+		}
+
+		++iter;
+	}
+}
+
+bool IsUploading(const char *bucket_id, const char *file_name)
+{
+	uploading_task_list_t::iterator iter = uploading_task_list.begin();
+
+	while (iter != uploading_task_list.end())
+	{
+		if (!strcmp(iter->bucket_id, bucket_id) &&
+			!strcmp(iter->file_name, file_name))
+		{
+			return true;
+		}
+
+		++iter;
+	}
+
+	return false;
+}
+
+void RemoveDownloadingTask(const char *full_path)
+{
+	downloading_task_list_t::iterator iter = downloading_task_list.begin();
+
+	while (iter != downloading_task_list.end())
+	{
+	#ifdef _WIN32
+		const char *converted_full_path = ConvertToWindowsPath(full_path);
+		if (!_stricmp(iter->full_path, converted_full_path))
+	#else
+		if (!strcmp(iter->full_path, full_path))
+	#endif
+		{
+		#ifdef _WIN32
+			free((char *)converted_full_path);
+		#endif
+
+			free((char *)iter->full_path);
+			downloading_task_list.erase(iter);
+
+			return;
+		}
+
+	#ifdef _WIN32
+		free((char *)converted_full_path);
+	#endif
+
+		++iter;
+	}
+}
+
+bool IsDownloading(const char *full_path)
+{
+	downloading_task_list_t::iterator iter = downloading_task_list.begin();
+
+	while (iter != downloading_task_list.end())
+	{
+	#ifdef _WIN32
+		const char *converted_full_path = ConvertToWindowsPath(full_path);
+		if (!_stricmp(iter->full_path, converted_full_path))
+	#else
+		if (!strcmp(iter->full_path, full_path))
+	#endif
+		{
+		#ifdef _WIN32
+			free((char *)converted_full_path);
+		#endif
+
+			return true;
+		}
+
+	#ifdef _WIN32
+		free((char *)converted_full_path);
+	#endif
+
+		++iter;
+	}
+
+	return false;
+}
+
+void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int status, char *file_id, void *handle)
 {
 	Nan::HandleScope scope;
+
+	RemoveUploadingTask(bucket_id, file_name);
 
 	transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = upload_callbacks->finished_callback;
@@ -684,12 +832,26 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_name = *file_name_str;
 	const char *file_name_dup = strdup(file_name);
 
-	//2018.7.27: index is used for encryption
-	Nan::MaybeLocal<Value> indexOption = options->Get(Nan::New("index").ToLocalChecked());
-	char *index = (char *)"";
-	if (!indexOption.ToLocalChecked()->IsNullOrUndefined())
+	if (IsUploading(bucket_id_dup, file_name_dup))
 	{
-		String::Utf8Value index_str(indexOption.ToLocalChecked());
+		v8::Local<v8::String> msg = Nan::New("File is already uploading").ToLocalChecked();
+		v8::Local<v8::Value> error = Nan::Error(msg);
+
+		Local<Value> argv[] = {
+			error,
+			Nan::Null() };
+
+		upload_callbacks->finished_callback->Call(2, argv);
+
+		return;
+	}
+
+	//2018.7.27: index is used for encryption, if not given, will rand one.
+	Local<Value> indexOption = options->Get(Nan::New("index").ToLocalChecked());
+	char *index = (char *)"";
+	if (!indexOption->IsNullOrUndefined())
+	{
+		String::Utf8Value index_str(indexOption);
 		index = *index_str;
 	}
 	const char *index_dup = strdup(index);
@@ -750,6 +912,12 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Unable to queue file upload");
 	}
 
+	uploading_task_t task;
+	task.bucket_id = strdup(state->bucket_id);
+	task.file_name = strdup(state->file_name);
+
+	uploading_task_list.push_back(task);
+
 	Isolate *isolate = args.GetIsolate();
 	Local<ObjectTemplate> state_template = ObjectTemplate::New(isolate);
 	state_template->SetInternalFieldCount(1);
@@ -768,9 +936,14 @@ void StoreFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
-	Local<Object> state_local = Nan::To<Object>(args[0]).ToLocalChecked();
-	genaro_upload_state_t *state = (genaro_upload_state_t *)state_local->GetAlignedPointerFromInternalField(0);
 
+	Local<Object> state_local = args[0].As<Object>();
+	if (state_local->IsNullOrUndefined())
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+
+	genaro_upload_state_t *state = (genaro_upload_state_t *)state_local->GetAlignedPointerFromInternalField(0);
 	genaro_bridge_store_file_cancel(state);
 }
 
@@ -780,9 +953,14 @@ void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
-	Local<Object> state_local = Nan::To<Object>(args[0]).ToLocalChecked();
-	genaro_download_state_t *state = (genaro_download_state_t *)state_local->GetAlignedPointerFromInternalField(0);
 
+	Local<Object> state_local = args[0].As<Object>();
+	if (state_local->IsNullOrUndefined())
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+
+	genaro_download_state_t *state = (genaro_download_state_t *)state_local->GetAlignedPointerFromInternalField(0);
 	genaro_bridge_resolve_file_cancel(state);
 }
 
@@ -790,38 +968,40 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 {
 	Nan::HandleScope scope;
 
+	RemoveDownloadingTask(origin_file_path);
+
 	fclose(fd);
 
 	// download success, remove the original file, and rename
 	// the downloaded file to the same file name.
 	if (status == 0)
 	{
-		const char *destinate_file_path = strdup(origin_file_path);
+		const char *final_file_path = strdup(origin_file_path);
 
 		bool getname_failed = true;
 
 		// original file exists
-		if (access(destinate_file_path, F_OK) != -1)
+		if (access(final_file_path, F_OK) != -1)
 		{
 			// delete it
-			int ret = unlink(destinate_file_path);
+			int ret = unlink(final_file_path);
 
 			// failed to delete
 			if (ret != 0)
 			{
-			#ifndef _WIN32
-				char *path_name = dirname((char *)destinate_file_path);
-				char *file_name = basename((char *)destinate_file_path);
-			#else
+#ifndef _WIN32
+				char *path_name = dirname((char *)final_file_path);
+				char *file_name = basename((char *)final_file_path);
+#else
 				char drive[_MAX_DRIVE];
 				char dir[_MAX_DIR];
 				char fname[_MAX_FNAME];
 				char ext[_MAX_EXT];
 
-				_splitpath(destinate_file_path, drive, dir, fname, ext);
+				_splitpath(final_file_path, drive, dir, fname, ext);
 				char *path_name = str_concat_many(2, drive, dir);
 				char *file_name = str_concat_many(2, fname, ext);
-			#endif
+#endif
 
 				int index = 1;
 				char temp_str[5];
@@ -835,12 +1015,12 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 						break;
 					}
 
-					free((char *)destinate_file_path);
-					destinate_file_path = str_concat_many(2, path_name, temp_file_name);
+					free((char *)final_file_path);
+					final_file_path = str_concat_many(2, path_name, temp_file_name);
 
 					free(temp_file_name);
 
-					if (access(destinate_file_path, F_OK) == -1)
+					if (access(final_file_path, F_OK) == -1)
 					{
 						getname_failed = false;
 						break;
@@ -859,14 +1039,14 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 
 		if (!getname_failed)
 		{
-			rename(renamed_file_path, destinate_file_path);
+			rename(renamed_file_path, final_file_path);
 		}
 		else
 		{
 			unlink(renamed_file_path);
 		}
 
-		free((char *)destinate_file_path);
+		free((char *)final_file_path);
 	}
 	else
 	{
@@ -933,12 +1113,32 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	String::Utf8Value file_path_str(args[2]);
 	const char *file_path = *file_path_str;
 
+	//convert to ANSI encoding on Win32, add on 2018.5.9
+#if defined(_WIN32)
+	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
+	const char *file_path_dup = strdup(u_p.get());
+#else
+	const char *file_path_dup = strdup(file_path);
+#endif
+
 	v8::Local<v8::Object> options = args[3].As<v8::Object>();
 
 	transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
 	download_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<Function>());
 	download_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<Function>());
+
+	if (IsDownloading(file_path_dup))
+	{
+		v8::Local<v8::String> msg = Nan::New("File is already downloading").ToLocalChecked();
+		v8::Local<v8::Value> error = Nan::Error(msg);
+		Local<Value> argv[] = {
+			error };
+
+		download_callbacks->finished_callback->Call(1, argv);
+
+		return;
+	}
 
 	Nan::MaybeLocal<Value> overwriteOption = options->Get(Nan::New("overwrite").ToLocalChecked());
 
@@ -949,14 +1149,6 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 
 	FILE *fd = NULL;
-
-	//convert to ANSI encoding on Win32, add on 2018.5.9
-#if defined(_WIN32)
-	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
-	const char *file_path_dup = strdup(u_p.get());
-#else
-	const char *file_path_dup = strdup(file_path);
-#endif
 
 	if (access(file_path_dup, F_OK) != -1)
 	{
@@ -1007,6 +1199,15 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	{
 		return Nan::ThrowError("Unable to queue file download");
 	}
+
+	downloading_task_t task;
+#ifdef _WIN32
+	task.full_path = ConvertToWindowsPath(state->origin_file_path);
+#else
+	task.full_path = strdup(state->origin_file_path);
+#endif
+
+	downloading_task_list.push_back(task);
 
 	Isolate *isolate = args.GetIsolate();
 	Local<ObjectTemplate> state_template = ObjectTemplate::New(isolate);
