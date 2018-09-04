@@ -1,6 +1,6 @@
 {
   "name": "libgenaro",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Node.js library for encrypted file transfer on the Genaro network.",
   "main": "index.js",
   "scripts": {
@@ -50,7 +50,7 @@
   },
   "libgenaro": {
     "basePath": "./libgenaro",
-    "baseUrl": "https://github.com/GenaroNetwork/libgenaro/releases/download/2.0.7",
+    "baseUrl": "https://github.com/GenaroNetwork/libgenaro/releases/download/2.0.8",
     "releases": [
       {
         "arch": "x64",
@@ -62,13 +62,13 @@
         "arch": "x64",
         "platform": "darwin",
         "filename": "darwin.tar.gz",
-        "checksum": "5e888e7b9bb80e1f0b3f8fcce2e254cd332fb184414393897f2a60b905ab269d"
+        "checksum": "5380835841f8d484c006e7dc419e1359b4c4e2f7d68f9483f7f3049541351972"
       },
       {
         "arch": "x64",
         "platform": "win32",
         "filename": "win_x64.zip",
-        "checksum": "e533137df962a9fcf18d9a023584184beb704eea6418a3a6959a37c59fc41a2d"
+        "checksum": "4820f5c6f401a0f29712d852709a59a9b8031a1889c2c9f03db5b2d2070603e4"
       }
     ]
   }

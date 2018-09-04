@@ -344,6 +344,7 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
 			bucket->Set(Nan::New("name").ToLocalChecked(), Nan::New(req->buckets[i].name).ToLocalChecked());
 			bucket->Set(Nan::New("created").ToLocalChecked(), StrToDate(req->buckets[i].created));
 			bucket->Set(Nan::New("id").ToLocalChecked(), Nan::New(req->buckets[i].id).ToLocalChecked());
+			bucket->Set(Nan::New("bucketId").ToLocalChecked(), Nan::New(req->buckets[i].bucketId).ToLocalChecked());
 			bucket->Set(Nan::New("decrypted").ToLocalChecked(), Nan::New<Boolean>(req->buckets[i].decrypted));
 			bucket->Set(Nan::New("limitStorage").ToLocalChecked(), Nan::New((double)req->buckets[i].limitStorage));
 			bucket->Set(Nan::New("usedStorage").ToLocalChecked(), Nan::New((double)req->buckets[i].usedStorage));
