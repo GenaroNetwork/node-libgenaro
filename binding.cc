@@ -1304,7 +1304,7 @@ void ShareFileCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-// use user's RSA public key to encrypt the file encryption key, and store to bridge.
+// use user's share public key to encrypt the file encryption key, and store to bridge.
 void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
 	if (args.Length() != 6 || !args[5]->IsFunction())
@@ -1424,8 +1424,8 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> key_file = options->Get(Nan::New("keyFile").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> passphrase = options->Get(Nan::New("passphrase").ToLocalChecked()).As<v8::String>();
-	// TODO dingyi, modify the name
-	v8::Local<v8::String> rsaPrivateKey = options->Get(Nan::New("rsaPrivateKey").ToLocalChecked()).As<v8::String>();
+	// TODO(dingyi): modify the name
+	v8::Local<v8::String> sharePrivateKey = options->Get(Nan::New("sharePrivateKey").ToLocalChecked()).As<v8::String>();
 	Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
 	Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
 
@@ -1487,8 +1487,8 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	const char *_key_file = *_keyFileObj;
 	String::Utf8Value _passphraseObj(passphrase);
 	const char *_passphrase = *_passphraseObj;
-	String::Utf8Value _rsaPrivateKeyObj(rsaPrivateKey);
-	const char *_rsaPrivateKey = *_rsaPrivateKeyObj;
+	String::Utf8Value _sharePrivateKeyObj(sharePrivateKey);
+	const char *_sharePrivateKey = *_sharePrivateKeyObj;
 
 	// Setup option structs
 	genaro_bridge_options_t bridge_options = {};
@@ -1507,8 +1507,8 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	genaro_key_result_to_encrypt_options(key_result, &encrypt_options);
 	json_object_put(key_json_obj);
 
-	genaro_rsa_prikey_options_t rsaPrikey_options;
-	rsaPrikey_options.priv_key = _rsaPrivateKey;
+	genaro_share_prikey_options_t sharePrikey_options;
+	sharePrikey_options.priv_key = _sharePrivateKey;
 
 	genaro_http_options_t http_options = {};
 	if (!user_agent.ToLocalChecked()->IsNullOrUndefined())
@@ -1536,7 +1536,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	// Initialize environment
 	genaro_env_t *env = genaro_init_env(&bridge_options,
 		&encrypt_options,
-		&rsaPrikey_options,
+		&sharePrikey_options,
 		&http_options,
 		&log_options);
 	free(encrypt_options.priv_key);

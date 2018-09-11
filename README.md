@@ -98,7 +98,7 @@ Methods available on an instance of `Environment`:
 - `.resolveFile(bucketId, fileId, filePath, options)` - Download a file, return state object
 - `.resolveFileCancel(state)` - Cancel a download
 - `.deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
-- `.decryptName(encryptedName) {})` - Decrypt a name that is encrypted.
+- `.decryptName(encryptedName) {})` - Decrypt a name that is encrypted
 - `.ShareFile(bucketId, fileId, decryptedFileName, toAddress, price, function(err) {})` - Share a file
 - `.destroy()` - Zero and free memory of encryption keys and the environment
 
