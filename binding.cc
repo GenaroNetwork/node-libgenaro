@@ -729,25 +729,6 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 	}
 }
 
-/*void StoreFileProgressCallback(double progress, uint64_t uploaded_bytes, uint64_t total_bytes, void *handle)
-{
-Nan::HandleScope scope;
-
-transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *)handle;
-Nan::Callback *callback = upload_callbacks->progress_callback;
-
-Local<Number> progress_local = Nan::New(progress);
-Local<Number> uploaded_bytes_local = Nan::New((double)uploaded_bytes);
-Local<Number> total_bytes_local = Nan::New((double)total_bytes);
-
-Local<Value> argv[] = {
-progress_local,
-uploaded_bytes_local,
-total_bytes_local};
-
-callback->Call(3, argv);
-}*/
-
 void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
 {
 	Nan::HandleScope scope;
@@ -1303,6 +1284,67 @@ void DecryptName(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 }
 
+void ShareFileCallback(uv_work_t *work_req, int status)
+{
+	Nan::HandleScope scope;
+
+	json_request_t *req = (json_request_t *)work_req->data;
+
+	Nan::Callback *callback = (Nan::Callback *)req->handle;
+	Local<Value> error = Nan::Null();
+
+	error_and_status_check<json_request_t>(req, &error);
+
+	Local<Value> argv[] = {
+		error };
+
+	callback->Call(1, argv);
+
+	free(req);
+	free(work_req);
+}
+
+// use user's RSA public key to encrypt the file encryption key, and store to bridge.
+void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
+{
+	if (args.Length() != 6 || !args[5]->IsFunction())
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+	if (args.This()->InternalFieldCount() != 1)
+	{
+		return Nan::ThrowError("Environment not available for instance");
+	}
+
+	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+	if (!env)
+	{
+		return Nan::ThrowError("Environment is not initialized");
+	}
+
+	String::Utf8Value bucket_id_str(args[0]);
+	const char *bucket_id = *bucket_id_str;
+	const char *bucket_id_dup = strdup(bucket_id);
+
+	String::Utf8Value file_id_str(args[1]);
+	const char *file_id = *file_id_str;
+	const char *file_id_dup = strdup(file_id);
+
+	String::Utf8Value decrypted_file_name_str(args[2]);
+	const char *decrypted_file_name = *decrypted_file_name_str;
+	const char *decrypted_file_name_dup = strdup(decrypted_file_name);
+
+	String::Utf8Value to_address_str(args[3]);
+	const char *to_address = *to_address_str;
+	const char *to_address_dup = strdup(to_address);
+
+	double price = args[4]->NumberValue();
+
+	Nan::Callback *callback = new Nan::Callback(args[5].As<Function>());
+
+	genaro_bridge_share_file(env, bucket_id_dup, file_id_dup, decrypted_file_name_dup, to_address, price, (void *)callback, ShareFileCallback);
+}
+
 void RegisterCallback(uv_work_t *work_req, int status)
 {
 	Nan::HandleScope scope;
@@ -1382,6 +1424,8 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> key_file = options->Get(Nan::New("keyFile").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> passphrase = options->Get(Nan::New("passphrase").ToLocalChecked()).As<v8::String>();
+	// TODO dingyi, modify the name
+	v8::Local<v8::String> rsaPrivateKey = options->Get(Nan::New("rsaPrivateKey").ToLocalChecked()).As<v8::String>();
 	Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
 	Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
 
@@ -1406,8 +1450,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	Nan::MaybeLocal<v8::Object> maybeInstance;
 	v8::Local<v8::Object> instance;
 
-	//v8::Local<v8::Value> argv[] = {};
-	v8::Local<v8::Value> *argv = 0;		//modified on 2018.5.9
+	v8::Local<v8::Value> *argv = 0;
 	maybeInstance = Nan::NewInstance(constructor->GetFunction(), 0, argv);
 
 	if (maybeInstance.IsEmpty())
@@ -1444,8 +1487,10 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	const char *_key_file = *_keyFileObj;
 	String::Utf8Value _passphraseObj(passphrase);
 	const char *_passphrase = *_passphraseObj;
-	// Setup option structs
+	String::Utf8Value _rsaPrivateKeyObj(rsaPrivateKey);
+	const char *_rsaPrivateKey = *_rsaPrivateKeyObj;
 
+	// Setup option structs
 	genaro_bridge_options_t bridge_options = {};
 	bridge_options.proto = proto;
 	bridge_options.host = host;
@@ -1461,6 +1506,9 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	genaro_encrypt_options_t encrypt_options;
 	genaro_key_result_to_encrypt_options(key_result, &encrypt_options);
 	json_object_put(key_json_obj);
+
+	genaro_rsa_prikey_options_t rsaPrikey_options;
+	rsaPrikey_options.priv_key = _rsaPrivateKey;
 
 	genaro_http_options_t http_options = {};
 	if (!user_agent.ToLocalChecked()->IsNullOrUndefined())
@@ -1486,9 +1534,9 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	}
 
 	// Initialize environment
-
 	genaro_env_t *env = genaro_init_env(&bridge_options,
 		&encrypt_options,
+		&rsaPrikey_options,
 		&http_options,
 		&log_options);
 	free(encrypt_options.priv_key);

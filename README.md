@@ -87,19 +87,20 @@ Please see [`./examples`](/examples) directory for further usage.
 
 Methods available on an instance of `Environment`:
 
-- `.getInfo(function(err, result) {})` - Gets general API info`
-- `.getBuckets(function(err, result) {})` - Gets list of available buckets
-- `.createBucket(bucketName, function(err, result) {})` - Creates a bucket
-- `.deleteBucket(bucketId, function(err, result) {})` - Deletes a bucket
+- `.getInfo(function(err, result) {})` - Get general API info`
+- `.getBuckets(function(err, result) {})` - Get list of available buckets
+- `.createBucket(bucketName, function(err, result) {})` - Create a bucket
+- `.deleteBucket(bucketId, function(err, result) {})` - Delete a bucket
 - `.renameBucket(bucketId, function(err) {})` - Rename a bucket
 - `.listFiles(bucketId, function(err, result) {})` - List files in a bucket
-- `.storeFile(bucketId, filePath, options)` - Uploads a file, returns state object
-- `.storeFileCancel(state)` - This will cancel an upload
-- `.resolveFile(bucketId, fileId, filePath, options)` - Downloads a file, return state object
-- `.resolveFileCancel(state)` - This will cancel a download
-- `.deleteFile(bucketId, fileId, function(err, result) {})` - Deletes a file from a bucket
+- `.storeFile(bucketId, filePath, options)` - Upload a file, return state object
+- `.storeFileCancel(state)` - Cancel an upload
+- `.resolveFile(bucketId, fileId, filePath, options)` - Download a file, return state object
+- `.resolveFileCancel(state)` - Cancel a download
+- `.deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
 - `.decryptName(encryptedName) {})` - Decrypt a name that is encrypted.
-- `.destroy()` - This will zero and free memory of encryption keys and the environment
+- `.ShareFile(bucketId, fileId, decryptedFileName, toAddress, price, function(err) {})` - Share a file
+- `.destroy()` - Zero and free memory of encryption keys and the environment
 
 
 ## License
