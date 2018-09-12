@@ -143,6 +143,7 @@ char *RetriveNewName(const char *fileName, const char *extra)
 	return retName;
 }
 
+#ifdef _WIN32
 const char *ConvertToWindowsPath(const char *path)
 {
 	if (path == NULL)
@@ -168,6 +169,7 @@ const char *ConvertToWindowsPath(const char *path)
 
 	return retPath;
 }
+#endif
 
 Local<Value> IntToGenaroError(int error_code)
 {
@@ -1288,12 +1290,12 @@ void ShareFileCallback(uv_work_t *work_req, int status)
 {
 	Nan::HandleScope scope;
 
-	json_request_t *req = (json_request_t *)work_req->data;
+	share_file_request_t *req = (share_file_request_t *)work_req->data;
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
 	Local<Value> error = Nan::Null();
 
-	error_and_status_check<json_request_t>(req, &error);
+	error_and_status_check<share_file_request_t>(req, &error);
 
 	Local<Value> argv[] = {
 		error };
@@ -1329,7 +1331,7 @@ void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
 	String::Utf8Value file_id_str(args[1]);
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
-
+    
 	String::Utf8Value decrypted_file_name_str(args[2]);
 	const char *decrypted_file_name = *decrypted_file_name_str;
 	const char *decrypted_file_name_dup = strdup(decrypted_file_name);
@@ -1337,12 +1339,12 @@ void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
 	String::Utf8Value to_address_str(args[3]);
 	const char *to_address = *to_address_str;
 	const char *to_address_dup = strdup(to_address);
-
+    
 	double price = args[4]->NumberValue();
-
+    
 	Nan::Callback *callback = new Nan::Callback(args[5].As<Function>());
 
-	genaro_bridge_share_file(env, bucket_id_dup, file_id_dup, decrypted_file_name_dup, to_address, price, (void *)callback, ShareFileCallback);
+	genaro_bridge_share_file(env, bucket_id_dup, file_id_dup, decrypted_file_name_dup, to_address_dup, price, (void *)callback, ShareFileCallback);
 }
 
 void RegisterCallback(uv_work_t *work_req, int status)
@@ -1424,7 +1426,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> key_file = options->Get(Nan::New("keyFile").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> passphrase = options->Get(Nan::New("passphrase").ToLocalChecked()).As<v8::String>();
-	// TODO(dingyi): modify the name
+	// TODO(dingyi)
 	v8::Local<v8::String> sharePrivateKey = options->Get(Nan::New("sharePrivateKey").ToLocalChecked()).As<v8::String>();
 	Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
 	Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
@@ -1445,6 +1447,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	Nan::SetPrototypeMethod(constructor, "resolveFileCancel", ResolveFileCancel);
 	Nan::SetPrototypeMethod(constructor, "deleteFile", DeleteFile);
 	Nan::SetPrototypeMethod(constructor, "decryptName", DecryptName);
+	Nan::SetPrototypeMethod(constructor, "shareFile", ShareFile);
 	Nan::SetPrototypeMethod(constructor, "destroy", DestroyEnvironment);
 
 	Nan::MaybeLocal<v8::Object> maybeInstance;
@@ -1463,7 +1466,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	}
 
 	// Bridge URL handling
-
 	String::Utf8Value _bridgeUrl(bridgeUrl);
 	const char *url = *_bridgeUrl;
 	char proto[6];
