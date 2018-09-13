@@ -1094,9 +1094,19 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
 
-	String::Utf8Value decrypt_key_str(args[2]);
-	const char *decrypt_key = *decrypt_key_str;
-	const char *decrypt_key_dup = strdup(decrypt_key);
+	// not String::Utf8Value
+	String::Value decrypt_key_str(args[2]);
+	// *(String::Value) will get an (uint16_t *)
+	char *decrypt_key_2bytes = (char *)*decrypt_key_str;
+	size_t decrypt_key_len = decrypt_key_str.length();
+	char *decrypt_key = (char *)malloc((decrypt_key_len + 1) * sizeof(char *));
+	// convert (uint16_t *) to (char *)
+	for(int i = 0; i < decrypt_key_len; i++)
+	{
+		decrypt_key[i] = decrypt_key_2bytes[2 * i];
+	}
+    decrypt_key[decrypt_key_len] = '\0';
+	char *decrypt_key_dup = strdup(decrypt_key);
 
 	String::Utf8Value file_path_str(args[3]);
 	const char *file_path = *file_path_str;
@@ -1299,39 +1309,13 @@ void ShareFileCallback(uv_work_t *work_req, int status)
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
 
-	// Local<Value> decrypt_key = Nan::Null();
-	// Local<Value> error = Nan::Null();
-
-	// if (error_and_status_check<share_file_request_t>(req, &error))
-	// {
-	// 	 Local<Object> decrypt_key_object = Nan::To<Object>(Nan::New<Object>()).ToLocalChecked();
-	// 	 decrypt_key_object->Set(Nan::New("decrypt_key").ToLocalChecked(), Nan::New(req->decrypt_key).ToLocalChecked());
-	// 	 decrypt_key = decrypt_key_object;
-	// }
-
-	// Local<Value> decrypt_key = Nan::Null();
-	// Local<Value> error = Nan::Null();
-
-	// if (error_and_status_check<share_file_request_t>(req, &error))
-	// {
-    //     decrypt_key = Nan::NewOneByteString((uint8_t *)req->decrypt_key).ToLocalChecked();
-        
-    //     v8::String::Utf8Value test_str(decrypt_key->To());
-    //     const char *test = *test_str;
-	// }
-
-	// Local<Value> decrypt_key = Nan::Null();
-	v8::Local<v8::String> decrypt_key;// = Nan::Null();
+	Local<Value> decrypt_key = Nan::Null();
 	Local<Value> error = Nan::Null();
 
 	if (error_and_status_check<share_file_request_t>(req, &error))
 	{
-        // decrypt_key = Nan::NewOneByteString((uint8_t *)req->decrypt_key).ToLocalChecked();
-
-		decrypt_key = Nan::New(req->decrypt_key).ToLocalChecked();
-        
-        v8::String::Utf8Value test_str(decrypt_key->ToString());
-        const char *test = *test_str;
+        // Nan::NewOneByteString() but not Nan::New(), because
+		decrypt_key = Nan::NewOneByteString((uint8_t *)req->decrypt_key).ToLocalChecked();
 	}
 
 	Local<Value> argv[] = {
