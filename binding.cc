@@ -82,7 +82,7 @@ char *str_concat_many(int count, ...)
 	return combined;
 }
 
-char *RetriveNewName(const char *fileName, const char *extra)
+char *RetrieveNewName(const char *fileName, const char *extra)
 {
 	if (fileName == NULL || strlen(fileName) == 0)
 	{
@@ -993,7 +993,7 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 				do
 				{
 					sprintf(temp_str, " (%d)", index);
-					char *temp_file_name = RetriveNewName(file_name, temp_str);
+					char *temp_file_name = RetrieveNewName(file_name, temp_str);
 					if (temp_file_name == NULL)
 					{
 						break;
@@ -1097,16 +1097,16 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	// not String::Utf8Value
 	String::Value decrypt_key_str(args[2]);
 	// *(String::Value) will get an (uint16_t *)
-	char *decrypt_key_2bytes = (char *)*decrypt_key_str;
+	uint8_t *decrypt_key_2bytes = (uint8_t *)*decrypt_key_str;
 	size_t decrypt_key_len = decrypt_key_str.length();
-	char *decrypt_key = (char *)malloc((decrypt_key_len + 1) * sizeof(char *));
+	uint8_t *decrypt_key = (uint8_t *)malloc((decrypt_key_len + 1) * sizeof(uint8_t));
 	// convert (uint16_t *) to (char *)
-	for(int i = 0; i < decrypt_key_len; i++)
+	for(size_t i = 0; i < decrypt_key_len; i++)
 	{
 		decrypt_key[i] = decrypt_key_2bytes[2 * i];
 	}
     decrypt_key[decrypt_key_len] = '\0';
-	char *decrypt_key_dup = strdup(decrypt_key);
+	uint8_t *decrypt_key_dup = (uint8_t *)strdup((char *)decrypt_key);
 
 	String::Utf8Value file_path_str(args[3]);
 	const char *file_path = *file_path_str;
