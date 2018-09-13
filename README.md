@@ -95,11 +95,11 @@ Methods available on an instance of `Environment`:
 - `.listFiles(bucketId, function(err, result) {})` - List files in a bucket
 - `.storeFile(bucketId, filePath, options)` - Upload a file, return state object
 - `.storeFileCancel(state)` - Cancel an upload
-- `.resolveFile(bucketId, fileId, filePath, options)` - Download a file, return state object
+- `.resolveFile(bucketId, fileId, decrypt_key, filePath, options)` - Download a file, return state object
 - `.resolveFileCancel(state)` - Cancel a download
 - `.deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
 - `.decryptName(encryptedName) {})` - Decrypt a name that is encrypted
-- `.ShareFile(bucketId, fileId, decryptedFileName, toAddress, price, function(err) {})` - Share a file
+- `.ShareFile(bucketId, fileId, function(err) {})` - Share a file
 - `.destroy()` - Zero and free memory of encryption keys and the environment
 
 

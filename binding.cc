@@ -1071,7 +1071,7 @@ void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *han
 
 void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
-	if (args.Length() != 4)
+	if (args.Length() != 5)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
@@ -1094,7 +1094,11 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
 
-	String::Utf8Value file_path_str(args[2]);
+	String::Utf8Value decrypt_key_str(args[2]);
+	const char *decrypt_key = *decrypt_key_str;
+	const char *decrypt_key_dup = strdup(decrypt_key);
+
+	String::Utf8Value file_path_str(args[3]);
 	const char *file_path = *file_path_str;
 
 	//convert to ANSI encoding on Win32, add on 2018.5.9
@@ -1105,7 +1109,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_path_dup = strdup(file_path);
 #endif
 
-	v8::Local<v8::Object> options = args[3].As<v8::Object>();
+	v8::Local<v8::Object> options = args[4].As<v8::Object>();
 
 	transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
@@ -1168,6 +1172,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_download_state_t *state = genaro_bridge_resolve_file(env,
 		bucket_id_dup,
 		file_id_dup,
+		decrypt_key_dup,
 		file_path_dup,
 		renamed_file_path,
 		fd,
@@ -1293,15 +1298,49 @@ void ShareFileCallback(uv_work_t *work_req, int status)
 	share_file_request_t *req = (share_file_request_t *)work_req->data;
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
+
+	// Local<Value> decrypt_key = Nan::Null();
+	// Local<Value> error = Nan::Null();
+
+	// if (error_and_status_check<share_file_request_t>(req, &error))
+	// {
+	// 	 Local<Object> decrypt_key_object = Nan::To<Object>(Nan::New<Object>()).ToLocalChecked();
+	// 	 decrypt_key_object->Set(Nan::New("decrypt_key").ToLocalChecked(), Nan::New(req->decrypt_key).ToLocalChecked());
+	// 	 decrypt_key = decrypt_key_object;
+	// }
+
+	// Local<Value> decrypt_key = Nan::Null();
+	// Local<Value> error = Nan::Null();
+
+	// if (error_and_status_check<share_file_request_t>(req, &error))
+	// {
+    //     decrypt_key = Nan::NewOneByteString((uint8_t *)req->decrypt_key).ToLocalChecked();
+        
+    //     v8::String::Utf8Value test_str(decrypt_key->To());
+    //     const char *test = *test_str;
+	// }
+
+	// Local<Value> decrypt_key = Nan::Null();
+	v8::Local<v8::String> decrypt_key;// = Nan::Null();
 	Local<Value> error = Nan::Null();
 
-	error_and_status_check<share_file_request_t>(req, &error);
+	if (error_and_status_check<share_file_request_t>(req, &error))
+	{
+        // decrypt_key = Nan::NewOneByteString((uint8_t *)req->decrypt_key).ToLocalChecked();
+
+		decrypt_key = Nan::New(req->decrypt_key).ToLocalChecked();
+        
+        v8::String::Utf8Value test_str(decrypt_key->ToString());
+        const char *test = *test_str;
+	}
 
 	Local<Value> argv[] = {
-		error };
+		error,
+	    decrypt_key };
 
-	callback->Call(1, argv);
+	callback->Call(2, argv);
 
+	free(req->path);
 	free(req);
 	free(work_req);
 }
@@ -1309,7 +1348,7 @@ void ShareFileCallback(uv_work_t *work_req, int status)
 // use user's share public key to encrypt the file encryption key, and store to bridge.
 void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
-	if (args.Length() != 6 || !args[5]->IsFunction())
+	if (args.Length() != 3 || !args[2]->IsFunction())
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
@@ -1332,19 +1371,9 @@ void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
     
-	String::Utf8Value decrypted_file_name_str(args[2]);
-	const char *decrypted_file_name = *decrypted_file_name_str;
-	const char *decrypted_file_name_dup = strdup(decrypted_file_name);
+	Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
 
-	String::Utf8Value to_address_str(args[3]);
-	const char *to_address = *to_address_str;
-	const char *to_address_dup = strdup(to_address);
-    
-	double price = args[4]->NumberValue();
-    
-	Nan::Callback *callback = new Nan::Callback(args[5].As<Function>());
-
-	genaro_bridge_share_file(env, bucket_id_dup, file_id_dup, decrypted_file_name_dup, to_address_dup, price, (void *)callback, ShareFileCallback);
+	genaro_bridge_share_file(env, bucket_id_dup, file_id_dup, (void *)callback, ShareFileCallback);
 }
 
 void RegisterCallback(uv_work_t *work_req, int status)
@@ -1426,8 +1455,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> key_file = options->Get(Nan::New("keyFile").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> passphrase = options->Get(Nan::New("passphrase").ToLocalChecked()).As<v8::String>();
-	// TODO(dingyi)
-	v8::Local<v8::String> sharePrivateKey = options->Get(Nan::New("sharePrivateKey").ToLocalChecked()).As<v8::String>();
 	Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
 	Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
 
@@ -1489,8 +1516,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	const char *_key_file = *_keyFileObj;
 	String::Utf8Value _passphraseObj(passphrase);
 	const char *_passphrase = *_passphraseObj;
-	String::Utf8Value _sharePrivateKeyObj(sharePrivateKey);
-	const char *_sharePrivateKey = *_sharePrivateKeyObj;
 
 	// Setup option structs
 	genaro_bridge_options_t bridge_options = {};
@@ -1508,9 +1533,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	genaro_encrypt_options_t encrypt_options;
 	genaro_key_result_to_encrypt_options(key_result, &encrypt_options);
 	json_object_put(key_json_obj);
-
-	genaro_share_prikey_options_t sharePrikey_options;
-	sharePrikey_options.priv_key = _sharePrivateKey;
 
 	genaro_http_options_t http_options = {};
 	if (!user_agent.ToLocalChecked()->IsNullOrUndefined())
@@ -1538,7 +1560,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	// Initialize environment
 	genaro_env_t *env = genaro_init_env(&bridge_options,
 		&encrypt_options,
-		&sharePrikey_options,
 		&http_options,
 		&log_options);
 	free(encrypt_options.priv_key);
