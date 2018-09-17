@@ -906,7 +906,6 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		encryption_key[i] = encryption_key_2bytes[2 * i];
 	}
     encryption_key[encryption_key_len] = '\0';
-	uint8_t *encryption_key_dup = (uint8_t *)strdup((char *)encryption_key);
 
 	// not String::Utf8Value
 	String::Value encryption_ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
@@ -921,12 +920,11 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		encryption_ctr[i] = encryption_ctr_2bytes[2 * i];
 	}
     encryption_ctr[encryption_ctr_len] = '\0';
-	uint8_t *encryption_ctr_dup = (uint8_t *)strdup((char *)encryption_ctr);
 
 	genaro_encryption_key_ctr_t *encryption_key_ctr = (genaro_encryption_key_ctr_t *)malloc(sizeof(genaro_encryption_key_ctr_t));
-	encryption_key_ctr->key = encryption_key_dup;
+	encryption_key_ctr->key = encryption_key;
 	encryption_key_ctr->key_len = encryption_key_len;
-	encryption_key_ctr->ctr = encryption_ctr_dup;
+	encryption_key_ctr->ctr = encryption_ctr;
 	encryption_key_ctr->ctr_len = encryption_ctr_len;
 
 	// not String::Utf8Value
@@ -942,7 +940,6 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		rsa_encryption_key[i] = rsa_encryption_key_2bytes[2 * i];
 	}
     rsa_encryption_key[rsa_encryption_key_len] = '\0';
-	uint8_t *rsa_encryption_key_dup = (uint8_t *)strdup((char *)rsa_encryption_key);
 
 	// not String::Utf8Value
     String::Value rsa_encryption_ctr_str(options->Get(Nan::New("RSACtr").ToLocalChecked()));
@@ -957,12 +954,11 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		rsa_encryption_ctr[i] = rsa_encryption_ctr_2bytes[2 * i];
 	}
     rsa_encryption_ctr[rsa_encryption_ctr_len] = '\0';
-	uint8_t *rsa_encryption_ctr_dup = (uint8_t *)strdup((char *)rsa_encryption_ctr);
 
 	genaro_encryption_key_ctr_t *rsa_encryption_key_ctr = (genaro_encryption_key_ctr_t *)malloc(sizeof(genaro_encryption_key_ctr_t));
-	rsa_encryption_key_ctr->key = rsa_encryption_key_dup;
+	rsa_encryption_key_ctr->key = rsa_encryption_key;
 	rsa_encryption_key_ctr->key_len = rsa_encryption_key_len;
-	rsa_encryption_key_ctr->ctr = rsa_encryption_ctr_dup;
+	rsa_encryption_key_ctr->ctr = rsa_encryption_ctr;
 	rsa_encryption_key_ctr->ctr_len = rsa_encryption_ctr_len;
 
 	genaro_upload_state_t *state;
@@ -1194,7 +1190,6 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		decryption_key[i] = decryption_key_2bytes[2 * i];
 	}
     decryption_key[decryption_key_len] = '\0';
-	uint8_t *decryption_key_dup = (uint8_t *)strdup((char *)decryption_key);
 
 	// not String::Utf8Value
 	String::Value decryption_ctr_str(args[3]);
@@ -1208,7 +1203,6 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		decryption_ctr[i] = decryption_ctr_2bytes[2 * i];
 	}
     decryption_ctr[decryption_ctr_len] = '\0';
-	uint8_t *decryption_ctr_dup = (uint8_t *)strdup((char *)decryption_ctr);
 
 	String::Utf8Value file_path_str(args[4]);
 	const char *file_path = *file_path_str;
@@ -1284,8 +1278,8 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_download_state_t *state = genaro_bridge_resolve_file(env,
 		bucket_id_dup,
 		file_id_dup,
-		decryption_key_dup,
-		decryption_ctr_dup,
+		decryption_key,
+		decryption_ctr,
 		file_path_dup,
 		temp_file_name,
 		fd,
