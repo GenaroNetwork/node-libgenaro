@@ -900,7 +900,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	uint8_t *encryption_key_2bytes = (uint8_t *)*encryption_key_str;
     size_t encryption_key_len = (*(encryption_keyLen_local->ToUint32()))->Value();
 	uint8_t *encryption_key = (uint8_t *)malloc((encryption_key_len + 1) * sizeof(uint8_t));
-	// convert (uint16_t *) to (char *)
+	// convert (uint16_t *) to (uint8_t *)
 	for(size_t i = 0; i < encryption_key_len; i++)
 	{
 		encryption_key[i] = encryption_key_2bytes[2 * i];
@@ -914,7 +914,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	uint8_t *encryption_ctr_2bytes = (uint8_t *)*encryption_ctr_str;
     size_t encryption_ctr_len = (*(encryption_ctrLen_local->ToUint32()))->Value();
 	uint8_t *encryption_ctr = (uint8_t *)malloc((encryption_ctr_len + 1) * sizeof(uint8_t));
-	// convert (uint16_t *) to (char *)
+	// convert (uint16_t *) to (uint8_t *)
 	for(size_t i = 0; i < encryption_ctr_len; i++)
 	{
 		encryption_ctr[i] = encryption_ctr_2bytes[2 * i];
@@ -934,7 +934,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	uint8_t *rsa_encryption_key_2bytes = (uint8_t *)*rsa_encryption_key_str;
     size_t rsa_encryption_key_len = (*(rsa_encryption_keyLen_local->ToUint32()))->Value();
 	uint8_t *rsa_encryption_key = (uint8_t *)malloc((rsa_encryption_key_len + 1) * sizeof(uint8_t));
-	// convert (uint16_t *) to (char *)
+	// convert (uint16_t *) to (uint8_t *)
 	for(size_t i = 0; i < rsa_encryption_key_len; i++)
 	{
 		rsa_encryption_key[i] = rsa_encryption_key_2bytes[2 * i];
@@ -948,7 +948,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	uint8_t *rsa_encryption_ctr_2bytes = (uint8_t *)*rsa_encryption_ctr_str;
     size_t rsa_encryption_ctr_len = (*(rsa_encryption_ctrLen_local->ToUint32()))->Value();
 	uint8_t *rsa_encryption_ctr = (uint8_t *)malloc((rsa_encryption_ctr_len + 1) * sizeof(uint8_t));
-	// convert (uint16_t *) to (char *)
+	// convert (uint16_t *) to (uint8_t *)
 	for(size_t i = 0; i < rsa_encryption_ctr_len; i++)
 	{
 		rsa_encryption_ctr[i] = rsa_encryption_ctr_2bytes[2 * i];
@@ -1155,7 +1155,7 @@ void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *han
 
 void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
-	if (args.Length() != 6)
+	if (args.Length() != 4)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
@@ -1178,33 +1178,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
 
-	// not String::Utf8Value
-	String::Value decryption_key_str(args[2]);
-	// *(String::Value) will get an (uint16_t *)
-	uint8_t *decryption_key_2bytes = (uint8_t *)*decryption_key_str;
-	size_t decryption_key_len = decryption_key_str.length();
-	uint8_t *decryption_key = (uint8_t *)malloc((decryption_key_len + 1) * sizeof(uint8_t));
-	// convert (uint16_t *) to (char *)
-	for(size_t i = 0; i < decryption_key_len; i++)
-	{
-		decryption_key[i] = decryption_key_2bytes[2 * i];
-	}
-    decryption_key[decryption_key_len] = '\0';
-
-	// not String::Utf8Value
-	String::Value decryption_ctr_str(args[3]);
-	// *(String::Value) will get an (uint16_t *)
-	uint8_t *decryption_ctr_2bytes = (uint8_t *)*decryption_ctr_str;
-	size_t decryption_ctr_len = decryption_ctr_str.length();
-	uint8_t *decryption_ctr = (uint8_t *)malloc((decryption_ctr_len + 1) * sizeof(uint8_t));
-	// convert (uint16_t *) to (char *)
-	for(size_t i = 0; i < decryption_ctr_len; i++)
-	{
-		decryption_ctr[i] = decryption_ctr_2bytes[2 * i];
-	}
-    decryption_ctr[decryption_ctr_len] = '\0';
-
-	String::Utf8Value file_path_str(args[4]);
+	String::Utf8Value file_path_str(args[2]);
 	const char *file_path = *file_path_str;
 
 	//convert to ANSI encoding on Win32, add on 2018.5.9
@@ -1215,7 +1189,42 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_path_dup = strdup(file_path);
 #endif
 
-	v8::Local<v8::Object> options = args[5].As<v8::Object>();
+	v8::Local<v8::Object> options = args[3].As<v8::Object>();
+
+	// not String::Utf8Value
+	String::Value decryption_key_str(options->Get(Nan::New("key").ToLocalChecked()));
+    Local<Value> decryption_keyLen_local = options->Get(Nan::New("keyLen").ToLocalChecked());
+	// *(String::Value) will get an (uint16_t *)
+	uint8_t *decryption_key_2bytes = (uint8_t *)*decryption_key_str;
+    size_t decryption_key_len = (*(decryption_keyLen_local->ToUint32()))->Value();
+	uint8_t *decryption_key = (uint8_t *)malloc((decryption_key_len + 1) * sizeof(uint8_t));
+	// convert (uint16_t *) to (uint8_t *)
+	for(size_t i = 0; i < decryption_key_len; i++)
+	{
+		decryption_key[i] = decryption_key_2bytes[2 * i];
+	}
+    decryption_key[decryption_key_len] = '\0';
+
+	printf("ResolveFile, %d\n", decryption_key_len);
+	for(int i = 0; i < decryption_key_len; i++)
+	{
+		printf("%x ", decryption_key[i]);
+	}
+	printf("\n");
+
+	// not String::Utf8Value
+	String::Value decryption_ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+    Local<Value> decryption_ctrLen_local = options->Get(Nan::New("ctrLen").ToLocalChecked());
+	// *(String::Value) will get an (uint16_t *)
+	uint8_t *decryption_ctr_2bytes = (uint8_t *)*decryption_ctr_str;
+    size_t decryption_ctr_len = (*(decryption_ctrLen_local->ToUint32()))->Value();
+	uint8_t *decryption_ctr = (uint8_t *)malloc((decryption_ctr_len + 1) * sizeof(uint8_t));
+	// convert (uint16_t *) to (uint8_t *)
+	for(size_t i = 0; i < decryption_ctr_len; i++)
+	{
+		decryption_ctr[i] = decryption_ctr_2bytes[2 * i];
+	}
+    decryption_ctr[decryption_ctr_len] = '\0';
 
 	transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
