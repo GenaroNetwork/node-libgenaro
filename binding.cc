@@ -1284,17 +1284,22 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return;
 	}
 
+	genaro_decryption_key_ctr_t *decryption_key_ctr_from_bridge = (genaro_decryption_key_ctr_t *)malloc(sizeof(genaro_decryption_key_ctr_t));
+	decryption_key_ctr_from_bridge->key = decryption_key;
+	decryption_key_ctr_from_bridge->key_len = decryption_key_len;
+	decryption_key_ctr_from_bridge->ctr = decryption_ctr;
+	decryption_key_ctr_from_bridge->ctr_len = decryption_ctr_len;
+
 	genaro_download_state_t *state = genaro_bridge_resolve_file(env,
-		bucket_id_dup,
-		file_id_dup,
-		decryption_key,
-		decryption_ctr,
-		file_path_dup,
-		temp_file_name,
-		fd,
-		(void *)download_callbacks,
-		ResolveFileProgressCallback,
-		ResolveFileFinishedCallback);
+																bucket_id_dup,
+																file_id_dup,
+																decryption_key_ctr_from_bridge,
+																file_path_dup,
+																temp_file_name,
+																fd,
+																(void *)download_callbacks,
+																ResolveFileProgressCallback,
+																ResolveFileFinishedCallback);
 	if (!state)
 	{
 		return Nan::ThrowError("Unable to create download state");
