@@ -781,6 +781,38 @@ std::unique_ptr<char[]> EncodingConvert(const char* strIn, int sourceCodepage, i
 }
 #endif
 
+void GenerateEncryptionKeyCtr(const Nan::FunctionCallbackInfo<Value> &args)
+{
+	if (args.Length() != 1)
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+	if (args.This()->InternalFieldCount() != 1)
+	{
+		return Nan::ThrowError("Environment not available for instance");
+	}
+
+	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+	if (!env)
+	{
+		return Nan::ThrowError("Environment is not initialized");
+	}
+
+	String::Utf8Value bucket_id_str(args[0]);
+	const char *bucket_id = *bucket_id_str;
+
+	genaro_encryption_key_ctr_t *encryption_key_ctr = genaro_generate_encryption_key_ctr(env, bucket_id);
+
+	if (encryption_key_ctr)
+	{
+		Local<Object> encryption = Nan::New<Object>();
+		encryption->Set(Nan::New("key").ToLocalChecked(), Nan::NewOneByteString(encryption_key_ctr->key, encryption_key_ctr->key_len).ToLocalChecked());
+		encryption->Set(Nan::New("ctr").ToLocalChecked(), Nan::NewOneByteString(encryption_key_ctr->ctr, encryption_key_ctr->ctr_len).ToLocalChecked());
+
+		args.GetReturnValue().Set(encryption);
+	}
+}
+
 void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
 	if (args.Length() != 3)
@@ -830,16 +862,6 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return;
 	}
 
-	//2018.7.27: index is used for encryption, if not given, will rand one.
-	Local<Value> indexOption = options->Get(Nan::New("index").ToLocalChecked());
-	char *index = (char *)"";
-	if (!indexOption->IsNullOrUndefined())
-	{
-		String::Utf8Value index_str(indexOption);
-		index = *index_str;
-	}
-	const char *index_dup = strdup(index);
-
 	//convert to ANSI encoding on Win32, add on 2018.5.9
 #if defined(_WIN32)
 	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
@@ -864,24 +886,90 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	genaro_upload_opts_t upload_opts = {};
 	upload_opts.prepare_frame_limit = 1,
-		upload_opts.push_frame_limit = 64;
+	upload_opts.push_frame_limit = 64;
 	upload_opts.push_shard_limit = 64;
 	upload_opts.rs = true;
 	upload_opts.bucket_id = bucket_id_dup;
-	if (strlen(index_dup) == 64)
-	{
-		upload_opts.index = index_dup;
-	}
-	else
-	{
-		upload_opts.index = NULL;
-	}
 	upload_opts.file_name = file_name_dup;
 	upload_opts.fd = fd;
+
+	// not String::Utf8Value
+	String::Value encryption_key_str(options->Get(Nan::New("key").ToLocalChecked()));
+    Local<Value> encryption_keyLen_local = options->Get(Nan::New("keyLen").ToLocalChecked());
+	// *(String::Value) will get an (uint16_t *)
+	uint8_t *encryption_key_2bytes = (uint8_t *)*encryption_key_str;
+    size_t encryption_key_len = (*(encryption_keyLen_local->ToUint32()))->Value();
+	uint8_t *encryption_key = (uint8_t *)malloc((encryption_key_len + 1) * sizeof(uint8_t));
+	// convert (uint16_t *) to (char *)
+	for(size_t i = 0; i < encryption_key_len; i++)
+	{
+		encryption_key[i] = encryption_key_2bytes[2 * i];
+	}
+    encryption_key[encryption_key_len] = '\0';
+	uint8_t *encryption_key_dup = (uint8_t *)strdup((char *)encryption_key);
+
+	// not String::Utf8Value
+	String::Value encryption_ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+    Local<Value> encryption_ctrLen_local = options->Get(Nan::New("ctrLen").ToLocalChecked());
+	// *(String::Value) will get an (uint16_t *)
+	uint8_t *encryption_ctr_2bytes = (uint8_t *)*encryption_ctr_str;
+    size_t encryption_ctr_len = (*(encryption_ctrLen_local->ToUint32()))->Value();
+	uint8_t *encryption_ctr = (uint8_t *)malloc((encryption_ctr_len + 1) * sizeof(uint8_t));
+	// convert (uint16_t *) to (char *)
+	for(size_t i = 0; i < encryption_ctr_len; i++)
+	{
+		encryption_ctr[i] = encryption_ctr_2bytes[2 * i];
+	}
+    encryption_ctr[encryption_ctr_len] = '\0';
+	uint8_t *encryption_ctr_dup = (uint8_t *)strdup((char *)encryption_ctr);
+
+	genaro_encryption_key_ctr_t *encryption_key_ctr = (genaro_encryption_key_ctr_t *)malloc(sizeof(genaro_encryption_key_ctr_t));
+	encryption_key_ctr->key = encryption_key_dup;
+	encryption_key_ctr->key_len = encryption_key_len;
+	encryption_key_ctr->ctr = encryption_ctr_dup;
+	encryption_key_ctr->ctr_len = encryption_ctr_len;
+
+	// not String::Utf8Value
+    String::Value rsa_encryption_key_str(options->Get(Nan::New("RSAKey").ToLocalChecked()));
+    Local<Value> rsa_encryption_keyLen_local = options->Get(Nan::New("RSAKeyLen").ToLocalChecked());
+	// *(String::Value) will get an (uint16_t *)
+	uint8_t *rsa_encryption_key_2bytes = (uint8_t *)*rsa_encryption_key_str;
+    size_t rsa_encryption_key_len = (*(rsa_encryption_keyLen_local->ToUint32()))->Value();
+	uint8_t *rsa_encryption_key = (uint8_t *)malloc((rsa_encryption_key_len + 1) * sizeof(uint8_t));
+	// convert (uint16_t *) to (char *)
+	for(size_t i = 0; i < rsa_encryption_key_len; i++)
+	{
+		rsa_encryption_key[i] = rsa_encryption_key_2bytes[2 * i];
+	}
+    rsa_encryption_key[rsa_encryption_key_len] = '\0';
+	uint8_t *rsa_encryption_key_dup = (uint8_t *)strdup((char *)rsa_encryption_key);
+
+	// not String::Utf8Value
+    String::Value rsa_encryption_ctr_str(options->Get(Nan::New("RSACtr").ToLocalChecked()));
+    Local<Value> rsa_encryption_ctrLen_local = options->Get(Nan::New("RSACtrLen").ToLocalChecked());
+	// *(String::Value) will get an (uint16_t *)
+	uint8_t *rsa_encryption_ctr_2bytes = (uint8_t *)*rsa_encryption_ctr_str;
+    size_t rsa_encryption_ctr_len = (*(rsa_encryption_ctrLen_local->ToUint32()))->Value();
+	uint8_t *rsa_encryption_ctr = (uint8_t *)malloc((rsa_encryption_ctr_len + 1) * sizeof(uint8_t));
+	// convert (uint16_t *) to (char *)
+	for(size_t i = 0; i < rsa_encryption_ctr_len; i++)
+	{
+		rsa_encryption_ctr[i] = rsa_encryption_ctr_2bytes[2 * i];
+	}
+    rsa_encryption_ctr[rsa_encryption_ctr_len] = '\0';
+	uint8_t *rsa_encryption_ctr_dup = (uint8_t *)strdup((char *)rsa_encryption_ctr);
+
+	genaro_encryption_key_ctr_t *rsa_encryption_key_ctr = (genaro_encryption_key_ctr_t *)malloc(sizeof(genaro_encryption_key_ctr_t));
+	rsa_encryption_key_ctr->key = rsa_encryption_key_dup;
+	rsa_encryption_key_ctr->key_len = rsa_encryption_key_len;
+	rsa_encryption_key_ctr->ctr = rsa_encryption_ctr_dup;
+	rsa_encryption_key_ctr->ctr_len = rsa_encryption_ctr_len;
 
 	genaro_upload_state_t *state;
 
 	state = genaro_bridge_store_file(env, &upload_opts,
+		encryption_key_ctr,
+		rsa_encryption_key_ctr,
 		(void *)upload_callbacks,
 		StoreFileProgressCallback,
 		StoreFileFinishedCallback);
@@ -948,11 +1036,11 @@ void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_bridge_resolve_file_cancel(state);
 }
 
-void ResolveFileFinishedCallback(int status, const char *origin_file_path, const char *renamed_file_path, FILE *fd, void *handle)
+void ResolveFileFinishedCallback(int status, const char *file_name, const char *temp_file_name, FILE *fd, void *handle)
 {
 	Nan::HandleScope scope;
 
-	RemoveDownloadingTask(origin_file_path);
+	RemoveDownloadingTask(file_name);
 
 	fclose(fd);
 
@@ -960,7 +1048,7 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 	// the downloaded file to the same file name.
 	if (status == 0)
 	{
-		const char *final_file_path = strdup(origin_file_path);
+		const char *final_file_path = strdup(file_name);
 
 		bool getname_failed = true;
 
@@ -1023,11 +1111,11 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 
 		if (!getname_failed)
 		{
-			rename(renamed_file_path, final_file_path);
+			rename(temp_file_name, final_file_path);
 		}
 		else
 		{
-			unlink(renamed_file_path);
+			unlink(temp_file_name);
 		}
 
 		free((char *)final_file_path);
@@ -1035,11 +1123,11 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 	else
 	{
 		// download failed, delete the temp file.
-		unlink(renamed_file_path);
+		unlink(temp_file_name);
 	}
 
-	free((char *)origin_file_path);
-	free((char *)renamed_file_path);
+	free((char *)file_name);
+	free((char *)temp_file_name);
 
 	transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = download_callbacks->finished_callback;
@@ -1071,7 +1159,7 @@ void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *han
 
 void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
-	if (args.Length() != 5)
+	if (args.Length() != 6)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
@@ -1095,20 +1183,34 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_id_dup = strdup(file_id);
 
 	// not String::Utf8Value
-	String::Value decrypt_key_str(args[2]);
+	String::Value decryption_key_str(args[2]);
 	// *(String::Value) will get an (uint16_t *)
-	uint8_t *decrypt_key_2bytes = (uint8_t *)*decrypt_key_str;
-	size_t decrypt_key_len = decrypt_key_str.length();
-	uint8_t *decrypt_key = (uint8_t *)malloc((decrypt_key_len + 1) * sizeof(uint8_t));
+	uint8_t *decryption_key_2bytes = (uint8_t *)*decryption_key_str;
+	size_t decryption_key_len = decryption_key_str.length();
+	uint8_t *decryption_key = (uint8_t *)malloc((decryption_key_len + 1) * sizeof(uint8_t));
 	// convert (uint16_t *) to (char *)
-	for(size_t i = 0; i < decrypt_key_len; i++)
+	for(size_t i = 0; i < decryption_key_len; i++)
 	{
-		decrypt_key[i] = decrypt_key_2bytes[2 * i];
+		decryption_key[i] = decryption_key_2bytes[2 * i];
 	}
-    decrypt_key[decrypt_key_len] = '\0';
-	uint8_t *decrypt_key_dup = (uint8_t *)strdup((char *)decrypt_key);
+    decryption_key[decryption_key_len] = '\0';
+	uint8_t *decryption_key_dup = (uint8_t *)strdup((char *)decryption_key);
 
-	String::Utf8Value file_path_str(args[3]);
+	// not String::Utf8Value
+	String::Value decryption_ctr_str(args[3]);
+	// *(String::Value) will get an (uint16_t *)
+	uint8_t *decryption_ctr_2bytes = (uint8_t *)*decryption_ctr_str;
+	size_t decryption_ctr_len = decryption_ctr_str.length();
+	uint8_t *decryption_ctr = (uint8_t *)malloc((decryption_ctr_len + 1) * sizeof(uint8_t));
+	// convert (uint16_t *) to (char *)
+	for(size_t i = 0; i < decryption_ctr_len; i++)
+	{
+		decryption_ctr[i] = decryption_ctr_2bytes[2 * i];
+	}
+    decryption_ctr[decryption_ctr_len] = '\0';
+	uint8_t *decryption_ctr_dup = (uint8_t *)strdup((char *)decryption_ctr);
+
+	String::Utf8Value file_path_str(args[4]);
 	const char *file_path = *file_path_str;
 
 	//convert to ANSI encoding on Win32, add on 2018.5.9
@@ -1119,7 +1221,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_path_dup = strdup(file_path);
 #endif
 
-	v8::Local<v8::Object> options = args[4].As<v8::Object>();
+	v8::Local<v8::Object> options = args[5].As<v8::Object>();
 
 	transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
@@ -1163,9 +1265,9 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		}
 	}
 
-	const char *renamed_file_path = str_concat_many(2, file_path_dup, ".genarotmp");
+	const char *temp_file_name = str_concat_many(2, file_path_dup, ".genarotmp");
 
-	fd = fopen(renamed_file_path, "w+");
+	fd = fopen(temp_file_name, "w+");
 
 	if (fd == NULL)
 	{
@@ -1182,9 +1284,10 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_download_state_t *state = genaro_bridge_resolve_file(env,
 		bucket_id_dup,
 		file_id_dup,
-		decrypt_key_dup,
+		decryption_key_dup,
+		decryption_ctr_dup,
 		file_path_dup,
-		renamed_file_path,
+		temp_file_name,
 		fd,
 		(void *)download_callbacks,
 		ResolveFileProgressCallback,
@@ -1201,9 +1304,9 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	downloading_task_t task;
 #ifdef _WIN32
-	task.full_path = ConvertToWindowsPath(state->origin_file_path);
+	task.full_path = ConvertToWindowsPath(state->file_name);
 #else
-	task.full_path = strdup(state->origin_file_path);
+	task.full_path = strdup(state->file_name);
 #endif
 
 	downloading_task_list.push_back(task);
@@ -1292,72 +1395,13 @@ void DecryptName(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *encrypted_name = *encrypted_name_str;
 	const char *encrypted_name_dup = strdup(encrypted_name);
 
-	char *decrypted_name = genaro_bridge_decrypt_name(env, encrypted_name_dup);
+	char *decrypted_name = genaro_decrypt_name(env, encrypted_name_dup);
 
 	if (decrypted_name)
 	{
 		// return the decrypted name to nodejs.
 		args.GetReturnValue().Set(Nan::New(decrypted_name).ToLocalChecked());
 	}
-}
-
-void ShareFileCallback(uv_work_t *work_req, int status)
-{
-	Nan::HandleScope scope;
-
-	share_file_request_t *req = (share_file_request_t *)work_req->data;
-
-	Nan::Callback *callback = (Nan::Callback *)req->handle;
-
-	Local<Value> decrypt_key = Nan::Null();
-	Local<Value> error = Nan::Null();
-
-	if (error_and_status_check<share_file_request_t>(req, &error))
-	{
-        // Nan::NewOneByteString() but not Nan::New(), because
-		decrypt_key = Nan::NewOneByteString((uint8_t *)req->decrypt_key).ToLocalChecked();
-	}
-
-	Local<Value> argv[] = {
-		error,
-	    decrypt_key };
-
-	callback->Call(2, argv);
-
-	free(req->path);
-	free(req);
-	free(work_req);
-}
-
-// use user's share public key to encrypt the file encryption key, and store to bridge.
-void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
-{
-	if (args.Length() != 3 || !args[2]->IsFunction())
-	{
-		return Nan::ThrowError("Unexpected arguments");
-	}
-	if (args.This()->InternalFieldCount() != 1)
-	{
-		return Nan::ThrowError("Environment not available for instance");
-	}
-
-	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-	if (!env)
-	{
-		return Nan::ThrowError("Environment is not initialized");
-	}
-
-	String::Utf8Value bucket_id_str(args[0]);
-	const char *bucket_id = *bucket_id_str;
-	const char *bucket_id_dup = strdup(bucket_id);
-
-	String::Utf8Value file_id_str(args[1]);
-	const char *file_id = *file_id_str;
-	const char *file_id_dup = strdup(file_id);
-    
-	Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
-
-	genaro_bridge_share_file(env, bucket_id_dup, file_id_dup, (void *)callback, ShareFileCallback);
 }
 
 void RegisterCallback(uv_work_t *work_req, int status)
@@ -1452,13 +1496,13 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	Nan::SetPrototypeMethod(constructor, "deleteBucket", DeleteBucket);
 	Nan::SetPrototypeMethod(constructor, "renameBucket", RenameBucket);
 	Nan::SetPrototypeMethod(constructor, "listFiles", ListFiles);
+	Nan::SetPrototypeMethod(constructor, "generateEncryptionKeyCtr", GenerateEncryptionKeyCtr);
 	Nan::SetPrototypeMethod(constructor, "storeFile", StoreFile);
 	Nan::SetPrototypeMethod(constructor, "storeFileCancel", StoreFileCancel);
 	Nan::SetPrototypeMethod(constructor, "resolveFile", ResolveFile);
 	Nan::SetPrototypeMethod(constructor, "resolveFileCancel", ResolveFileCancel);
 	Nan::SetPrototypeMethod(constructor, "deleteFile", DeleteFile);
 	Nan::SetPrototypeMethod(constructor, "decryptName", DecryptName);
-	Nan::SetPrototypeMethod(constructor, "shareFile", ShareFile);
 	Nan::SetPrototypeMethod(constructor, "destroy", DestroyEnvironment);
 
 	Nan::MaybeLocal<v8::Object> maybeInstance;
