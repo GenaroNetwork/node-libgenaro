@@ -810,7 +810,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_encryption_info_t *encryption_info = genaro_generate_encryption_info(env, bucket_id);
 
 	// printf("encrypt_key: ");
-    // for(int i = 0; i < 64; i++)
+    // for(int i = 0; i < 32; i++)
     // {
     //     printf(" %x", encryption_info->key_ctr->key[i]);
     // }
