@@ -99,7 +99,7 @@ Methods available on an instance of `Environment`:
 - `.resolveFileCancel(state)` - Cancel a download
 - `.deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
 - `.decryptName(encryptedName) {})` - Decrypt a name that is encrypted
-- `.GenerateEncryptionKeyCtr(bucketId)` - Generate the key and ctr of AES256 CTR mode for file encryption.
+- `.GenerateEncryptionInfo(bucketId)` - Generate the key and ctr of AES256 CTR mode for file encryption, and also the index related to the key and ctr.
 - `.destroy()` - Zero and free memory of encryption keys and the environment
 
 
