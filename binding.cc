@@ -945,8 +945,8 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	encryption_key_ctr->ctr_len = encryption_ctr_len;
 
 	// not String::Utf8Value
-    String::Value rsa_encryption_key_str(options->Get(Nan::New("RSAKey").ToLocalChecked()));
-    Local<Value> rsa_encryption_keyLen_local = options->Get(Nan::New("RSAKeyLen").ToLocalChecked());
+    String::Value rsa_encryption_key_str(options->Get(Nan::New("rsaKey").ToLocalChecked()));
+    Local<Value> rsa_encryption_keyLen_local = options->Get(Nan::New("rsaKeyLen").ToLocalChecked());
 	// *(String::Value) will get an (uint16_t *)
 	uint8_t *rsa_encryption_key_2bytes = (uint8_t *)*rsa_encryption_key_str;
     size_t rsa_encryption_key_len = (size_t)rsa_encryption_keyLen_local->Uint32Value();
@@ -957,10 +957,17 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		rsa_encryption_key[i] = rsa_encryption_key_2bytes[2 * i];
 	}
     rsa_encryption_key[rsa_encryption_key_len] = '\0';
+    
+//    printf("rsa_encryption_key:");
+//    for(int i = 0; i < rsa_encryption_key_len; i++)
+//    {
+//        printf(" %x", rsa_encryption_key[i]);
+//    }
+//    printf("\n");
 
 	// not String::Utf8Value
-    String::Value rsa_encryption_ctr_str(options->Get(Nan::New("RSACtr").ToLocalChecked()));
-    Local<Value> rsa_encryption_ctrLen_local = options->Get(Nan::New("RSACtrLen").ToLocalChecked());
+    String::Value rsa_encryption_ctr_str(options->Get(Nan::New("rsaCtr").ToLocalChecked()));
+    Local<Value> rsa_encryption_ctrLen_local = options->Get(Nan::New("rsaCtrLen").ToLocalChecked());
 	// *(String::Value) will get an (uint16_t *)
 	uint8_t *rsa_encryption_ctr_2bytes = (uint8_t *)*rsa_encryption_ctr_str;
     size_t rsa_encryption_ctr_len = (size_t)rsa_encryption_ctrLen_local->Uint32Value();

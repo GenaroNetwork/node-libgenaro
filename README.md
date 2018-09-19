@@ -35,17 +35,34 @@ Upload a file to a bucket:
 const bucketId = '368be0816766b28fd5f43af5';
 const filePath = './test-upload.data';
 
+const keyCtr = env.generateEncryptionInfo(bucketId);
+const index = keyCtr['index'];
+const key = keyCtr['key'];
+const ctr = keyCtr['ctr'];
+
+const rsaKey = xxxxxx; // encrypted key with rsa
+const rsaCtr = xxxxxx; // encrypted ctr with rsa
+
 const state = libgenaro.storeFile(bucketId, filePath, {
-  filename: 'test-upload.data',
-  progressCallback: function(progress, fileBytes) {
+  'filename': 'test-upload.data',
+  'progressCallback': function(progress, fileBytes) {
     console.log('progress:', progress);
   },
-  finishedCallback: function(err, fileId) {
+  'finishedCallback': function(err, fileId) {
     if (err) {
       return console.error(err);
     }
     console.log('File complete:', fileId);
-  }
+  },
+  'index': index,
+  'key': key,
+  'keyLen': key.length,
+  'ctr': ctr,
+  'ctrLen': ctr.length,
+  'rsaKey': rsaKey,
+  'rsaKeyLen': rsaKey.length,
+  'rsaCtr': rsaCtr,
+  'rsaCtrLen': rsaCtr.length
 });
 
 ```
@@ -57,11 +74,19 @@ const bucketId = '368be0816766b28fd5f43af5';
 const fileId = '998960317b6725a3f8080c2b';
 const downloadFilePath = './test-download.data';
 
+const key = xxxxxx; // the file encryption key
+const ctr = xxxxxx; // the file encryption ctr
+
 const state = libgenaro.resolveFile(bucketId, fileId, downloadFilePath, {
-  progressCallback: function(progress, fileBytes) {
+  'key': key,
+  'keyLen': key.length,
+  'ctr': ctr,
+  'ctrLen': ctr.length,
+  'overwrite': true,
+  'progressCallback': function(progress, fileBytes) {
     console.log('progress:', progress)
   },
-  finishedCallback: function(err) {
+  'finishedCallback': function(err) {
     if (err) {
       return console.error(err);
     }
@@ -98,8 +123,8 @@ Methods available on an instance of `Environment`:
 - `.resolveFile(bucketId, fileId, decryption_key, decryption_ctr, filePath, options)` - Download a file, return state object
 - `.resolveFileCancel(state)` - Cancel a download
 - `.deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
-- `.decryptName(encryptedName) {})` - Decrypt a name that is encrypted
-- `.GenerateEncryptionInfo(bucketId)` - Generate the key and ctr of AES256 CTR mode for file encryption, and also the index related to the key and ctr.
+- `.decryptName(encryptedName)` - Decrypt a name that is encrypted, return undefined if fail
+- `.generateEncryptionInfo(bucketId)` - Generate the key and ctr of AES-256-CTR for file encryption, and also the index related to the key and ctr,, return undefined if fail
 - `.destroy()` - Zero and free memory of encryption keys and the environment
 
 
