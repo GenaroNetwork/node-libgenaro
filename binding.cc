@@ -909,36 +909,36 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *index = *index_str;
 	const char *index_dup = strdup(index);
 
-	String::Utf8Value encryption_key_str(options->Get(Nan::New("key").ToLocalChecked()));
-	const char *encryption_key = *encryption_key_str;
-	const char *encryption_key_dup = strdup(encryption_key);
+	String::Utf8Value key_str(options->Get(Nan::New("key").ToLocalChecked()));
+	const char *key = *key_str;
+	const char *key_dup = strdup(key);
 
-	String::Utf8Value encryption_ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
-	const char *encryption_ctr = *encryption_ctr_str;
-	const char *encryption_ctr_dup = strdup(encryption_ctr);
+	String::Utf8Value ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+	const char *ctr = *ctr_str;
+	const char *ctr_dup = strdup(ctr);
 
-	genaro_decryption_key_ctr_as_str_t *encryption_key_ctr = (genaro_decryption_key_ctr_as_str_t *)malloc(sizeof(genaro_decryption_key_ctr_as_str_t));
-	encryption_key_ctr->key_as_str = encryption_key_dup;
-	encryption_key_ctr->ctr_as_str = encryption_ctr_dup;
+	genaro_key_ctr_as_str_t *key_ctr = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
+	key_ctr->key_as_str = key_dup;
+	key_ctr->ctr_as_str = ctr_dup;
 
-	String::Utf8Value rsa_encryption_key_str(options->Get(Nan::New("rsaKey").ToLocalChecked()));
-	const char *rsa_encryption_key = *rsa_encryption_key_str;
-	const char *rsa_encryption_key_dup = strdup(rsa_encryption_key);
+	String::Utf8Value rsa_key_str(options->Get(Nan::New("rsaKey").ToLocalChecked()));
+	const char *rsa_key = *rsa_key_str;
+	const char *rsa_key_dup = strdup(rsa_key);
 
-	String::Utf8Value rsa_encryption_ctr_str(options->Get(Nan::New("rsaCtr").ToLocalChecked()));
-	const char *rsa_encryption_ctr = *rsa_encryption_ctr_str;
-	const char *rsa_encryption_ctr_dup = strdup(rsa_encryption_ctr);
+	String::Utf8Value rsa_ctr_str(options->Get(Nan::New("rsaCtr").ToLocalChecked()));
+	const char *rsa_ctr = *rsa_ctr_str;
+	const char *rsa_ctr_dup = strdup(rsa_ctr);
 
-	genaro_decryption_key_ctr_as_str_t *rsa_encryption_key_ctr_as_str = (genaro_decryption_key_ctr_as_str_t *)malloc(sizeof(genaro_decryption_key_ctr_as_str_t));
-	rsa_encryption_key_ctr_as_str->key_as_str = rsa_encryption_key_dup;
-	rsa_encryption_key_ctr_as_str->ctr_as_str = rsa_encryption_ctr_dup;
+	genaro_key_ctr_as_str_t *rsa_key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
+	rsa_key_ctr_as_str->key_as_str = rsa_key_dup;
+	rsa_key_ctr_as_str->ctr_as_str = rsa_ctr_dup;
 
 	genaro_upload_state_t *state;
 
 	state = genaro_bridge_store_file(env, &upload_opts,
 		index_dup,
-		encryption_key_ctr,
-		rsa_encryption_key_ctr_as_str,
+		key_ctr,
+		rsa_key_ctr_as_str,
 		(void *)upload_callbacks,
 		StoreFileProgressCallback,
 		StoreFileFinishedCallback);
@@ -1030,10 +1030,10 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 			// failed to delete
 			if (ret != 0)
 			{
-#ifndef _WIN32
+			#ifndef _WIN32
 				char *path_name = dirname((char *)final_file_path);
 				char *file_name = basename((char *)final_file_path);
-#else
+			#else
 				char drive[_MAX_DRIVE];
 				char dir[_MAX_DIR];
 				char fname[_MAX_FNAME];
@@ -1042,7 +1042,7 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 				_splitpath(final_file_path, drive, dir, fname, ext);
 				char *path_name = str_concat_many(2, drive, dir);
 				char *file_name = str_concat_many(2, fname, ext);
-#endif
+			#endif
 
 				int index = 1;
 				char temp_str[5];
@@ -1182,11 +1182,11 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		decryption_ctr_dup = strdup(decryption_ctr);
 	}
 
-	genaro_decryption_key_ctr_as_str_t *decryption_key_ctr_as_str = NULL;
+	genaro_key_ctr_as_str_t *decryption_key_ctr_as_str = NULL;
 
 	if(decryption_key_dup && decryption_ctr_dup)
 	{
-		decryption_key_ctr_as_str = (genaro_decryption_key_ctr_as_str_t *)malloc(sizeof(genaro_decryption_key_ctr_as_str_t));
+		decryption_key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
 		decryption_key_ctr_as_str->key_as_str = decryption_key_dup;
 		decryption_key_ctr_as_str->ctr_as_str = decryption_ctr_dup;
 	}
