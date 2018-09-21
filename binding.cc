@@ -1167,28 +1167,36 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	bool hasKey = options->HasOwnProperty(Nan::New("key").ToLocalChecked());
 	bool hasCtr = options->HasOwnProperty(Nan::New("ctr").ToLocalChecked());
 
-	const char *decryption_key = NULL;
-	const char *decryption_ctr = NULL;
-	const char *decryption_key_dup = NULL;
-	const char *decryption_ctr_dup = NULL;
+	const char *key = NULL;
+	const char *ctr = NULL;
+	const char *key_dup = NULL;
+	const char *ctr_dup = NULL;
 	if(hasKey && hasCtr)
 	{
-		String::Utf8Value decryption_key_str(options->Get(Nan::New("key").ToLocalChecked()));
-		decryption_key = *decryption_key_str;
-		decryption_key_dup = strdup(decryption_key);
+		String::Utf8Value key_str(options->Get(Nan::New("key").ToLocalChecked()));
+		key = *key_str;
 
-		String::Utf8Value decryption_ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
-		decryption_ctr = *decryption_ctr_str;
-		decryption_ctr_dup = strdup(decryption_ctr);
+		if(key && key[0] != '\0')
+		{
+			key_dup = strdup(key);
+		}
+
+		String::Utf8Value ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+		ctr = *ctr_str;
+
+		if(ctr && ctr[0] != '\0')
+		{
+			ctr_dup = strdup(ctr);
+		}
 	}
 
-	genaro_key_ctr_as_str_t *decryption_key_ctr_as_str = NULL;
+	genaro_key_ctr_as_str_t *key_ctr_as_str = NULL;
 
-	if(decryption_key_dup && decryption_ctr_dup)
+	if(key_dup && ctr_dup)
 	{
-		decryption_key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
-		decryption_key_ctr_as_str->key_as_str = decryption_key_dup;
-		decryption_key_ctr_as_str->ctr_as_str = decryption_ctr_dup;
+		key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
+		key_ctr_as_str->key_as_str = key_dup;
+		key_ctr_as_str->ctr_as_str = ctr_dup;
 	}
 
 	transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
@@ -1252,7 +1260,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_download_state_t *state = genaro_bridge_resolve_file(env,
 																bucket_id_dup,
 																file_id_dup,
-																decryption_key_ctr_as_str,
+																key_ctr_as_str,
 																file_path_dup,
 																temp_file_name,
 																fd,

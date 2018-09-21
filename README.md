@@ -44,25 +44,21 @@ const rsaKey = xxxxxx; // encrypted key with rsa
 const rsaCtr = xxxxxx; // encrypted ctr with rsa
 
 const state = libgenaro.storeFile(bucketId, filePath, {
-  'filename': 'test-upload.data',
-  'progressCallback': function(progress, fileBytes) {
+  filename: 'test-upload.data',
+  progressCallback: function(progress, fileBytes) {
     console.log('progress:', progress);
   },
-  'finishedCallback': function(err, fileId) {
+  finishedCallback: function(err, fileId) {
     if (err) {
       return console.error(err);
     }
     console.log('File complete:', fileId);
   },
-  'index': index,
-  'key': key,
-  'keyLen': key.length,
-  'ctr': ctr,
-  'ctrLen': ctr.length,
-  'rsaKey': rsaKey,
-  'rsaKeyLen': rsaKey.length,
-  'rsaCtr': rsaCtr,
-  'rsaCtrLen': rsaCtr.length
+  index: index,
+  key: key,
+  ctr: ctr,
+  rsaKey: rsaKey,
+  rsaCtr: rsaCtr,
 });
 
 ```
@@ -78,15 +74,13 @@ const key = xxxxxx; // the file encryption key
 const ctr = xxxxxx; // the file encryption ctr
 
 const state = libgenaro.resolveFile(bucketId, fileId, downloadFilePath, {
-  'key': key,
-  'keyLen': key.length,
-  'ctr': ctr,
-  'ctrLen': ctr.length,
-  'overwrite': true,
-  'progressCallback': function(progress, fileBytes) {
+  key: key,
+  ctr: ctr,
+  overwrite: true,
+  progressCallback: function(progress, fileBytes) {
     console.log('progress:', progress)
   },
-  'finishedCallback': function(err) {
+  finishedCallback: function(err) {
     if (err) {
       return console.error(err);
     }
