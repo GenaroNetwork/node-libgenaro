@@ -35,6 +35,14 @@ Upload a file to a bucket:
 const bucketId = '368be0816766b28fd5f43af5';
 const filePath = './test-upload.data';
 
+const keyCtr = env.generateEncryptionInfo(bucketId);
+const index = keyCtr['index'];
+const key = keyCtr['key'];
+const ctr = keyCtr['ctr'];
+
+const rsaKey = xxxxxx; // encrypted key with rsa
+const rsaCtr = xxxxxx; // encrypted ctr with rsa
+
 const state = libgenaro.storeFile(bucketId, filePath, {
   filename: 'test-upload.data',
   progressCallback: function(progress, fileBytes) {
@@ -45,7 +53,12 @@ const state = libgenaro.storeFile(bucketId, filePath, {
       return console.error(err);
     }
     console.log('File complete:', fileId);
-  }
+  },
+  index: index,
+  key: key,
+  ctr: ctr,
+  rsaKey: rsaKey,
+  rsaCtr: rsaCtr,
 });
 
 ```
@@ -57,7 +70,13 @@ const bucketId = '368be0816766b28fd5f43af5';
 const fileId = '998960317b6725a3f8080c2b';
 const downloadFilePath = './test-download.data';
 
+const key = xxxxxx; // the file encryption key
+const ctr = xxxxxx; // the file encryption ctr
+
 const state = libgenaro.resolveFile(bucketId, fileId, downloadFilePath, {
+  key: key,
+  ctr: ctr,
+  overwrite: true,
   progressCallback: function(progress, fileBytes) {
     console.log('progress:', progress)
   },
@@ -95,11 +114,11 @@ Methods available on an instance of `Environment`:
 - `.listFiles(bucketId, function(err, result) {})` - List files in a bucket
 - `.storeFile(bucketId, filePath, options)` - Upload a file, return state object
 - `.storeFileCancel(state)` - Cancel an upload
-- `.resolveFile(bucketId, fileId, filePath, options)` - Download a file, return state object
+- `.resolveFile(bucketId, fileId, decryption_key, decryption_ctr, filePath, options)` - Download a file, return state object
 - `.resolveFileCancel(state)` - Cancel a download
 - `.deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
-- `.decryptName(encryptedName) {})` - Decrypt a name that is encrypted
-- `.ShareFile(bucketId, fileId, decryptedFileName, toAddress, price, function(err) {})` - Share a file
+- `.decryptName(encryptedName)` - Decrypt a name that is encrypted, return undefined if fail
+- `.generateEncryptionInfo(bucketId)` - Generate the key and ctr of AES-256-CTR for file encryption, and also the index related to the key and ctr,, return undefined if fail
 - `.destroy()` - Zero and free memory of encryption keys and the environment
 
 
