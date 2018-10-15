@@ -82,7 +82,7 @@ char *str_concat_many(int count, ...)
 	return combined;
 }
 
-char *RetriveNewName(const char *fileName, const char *extra)
+char *RetrieveNewName(const char *fileName, const char *extra)
 {
 	if (fileName == NULL || strlen(fileName) == 0)
 	{
@@ -143,6 +143,7 @@ char *RetriveNewName(const char *fileName, const char *extra)
 	return retName;
 }
 
+#ifdef _WIN32
 const char *ConvertToWindowsPath(const char *path)
 {
 	if (path == NULL)
@@ -168,6 +169,7 @@ const char *ConvertToWindowsPath(const char *path)
 
 	return retPath;
 }
+#endif
 
 Local<Value> IntToGenaroError(int error_code)
 {
@@ -408,6 +410,12 @@ void ListFilesCallback(uv_work_t *work_req, int status)
 			file->Set(Nan::New("id").ToLocalChecked(), Nan::New(req->files[i].id).ToLocalChecked());
 			file->Set(Nan::New("size").ToLocalChecked(), Nan::New((double)(req->files[i].size)));
 			file->Set(Nan::New("created").ToLocalChecked(), StrToDate(req->files[i].created));
+
+			if(req->files[i].rsaKey && req->files[i].rsaCtr)
+			{
+				file->Set(Nan::New("rsaKey").ToLocalChecked(), Nan::New(req->files[i].rsaKey).ToLocalChecked());
+				file->Set(Nan::New("rsaCtr").ToLocalChecked(), Nan::New(req->files[i].rsaCtr).ToLocalChecked());
+			}
 			files_array->Set(i, file);
 		}
 		files_value = files_array;
@@ -611,8 +619,8 @@ void RemoveUploadingTask(const char *bucket_id, const char *file_name)
 		if (!strcmp(iter->file_name, file_name) &&
 			!strcmp(iter->bucket_id, bucket_id))
 		{
-			free((char *)iter->bucket_id);
-			free((char *)iter->file_name);
+			free((void *)iter->bucket_id);
+			free((void *)iter->file_name);
 			uploading_task_list.erase(iter);
 			return;
 		}
@@ -653,17 +661,17 @@ void RemoveDownloadingTask(const char *full_path)
 	#endif
 		{
 		#ifdef _WIN32
-			free((char *)converted_full_path);
+			free((void *)converted_full_path);
 		#endif
 
-			free((char *)iter->full_path);
+			free((void *)iter->full_path);
 			downloading_task_list.erase(iter);
 
 			return;
 		}
 
 	#ifdef _WIN32
-		free((char *)converted_full_path);
+		free((void *)converted_full_path);
 	#endif
 
 		++iter;
@@ -684,14 +692,14 @@ bool IsDownloading(const char *full_path)
 	#endif
 		{
 		#ifdef _WIN32
-			free((char *)converted_full_path);
+			free((void *)converted_full_path);
 		#endif
 
 			return true;
 		}
 
 	#ifdef _WIN32
-		free((char *)converted_full_path);
+		free((void *)converted_full_path);
 	#endif
 
 		++iter;
@@ -779,6 +787,44 @@ std::unique_ptr<char[]> EncodingConvert(const char* strIn, int sourceCodepage, i
 }
 #endif
 
+void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
+{
+	if (args.Length() != 1)
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+	if (args.This()->InternalFieldCount() != 1)
+	{
+		return Nan::ThrowError("Environment not available for instance");
+	}
+
+	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+	if (!env)
+	{
+		return Nan::ThrowError("Environment is not initialized");
+	}
+
+	String::Utf8Value bucket_id_str(args[0]);
+	const char *bucket_id = *bucket_id_str;
+
+	genaro_encryption_info_t *encryption_info = genaro_generate_encryption_info(env, bucket_id);
+
+	if (encryption_info)
+	{
+		Local<Object> encryption = Nan::New<Object>();
+		encryption->Set(Nan::New("index").ToLocalChecked(), Nan::New(encryption_info->index).ToLocalChecked());
+		free(encryption_info->index);
+		encryption->Set(Nan::New("key").ToLocalChecked(), Nan::New(encryption_info->key_ctr_as_str->key_as_str).ToLocalChecked());
+		free((void *)encryption_info->key_ctr_as_str->key_as_str);
+		encryption->Set(Nan::New("ctr").ToLocalChecked(), Nan::New(encryption_info->key_ctr_as_str->ctr_as_str).ToLocalChecked());
+		free((void *)encryption_info->key_ctr_as_str->ctr_as_str);
+		free(encryption_info->key_ctr_as_str);
+		free(encryption_info);
+
+		args.GetReturnValue().Set(encryption);
+	}
+}
+
 void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
 	if (args.Length() != 3)
@@ -828,16 +874,6 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return;
 	}
 
-	//2018.7.27: index is used for encryption, if not given, will rand one.
-	Local<Value> indexOption = options->Get(Nan::New("index").ToLocalChecked());
-	char *index = (char *)"";
-	if (!indexOption->IsNullOrUndefined())
-	{
-		String::Utf8Value index_str(indexOption);
-		index = *index_str;
-	}
-	const char *index_dup = strdup(index);
-
 	//convert to ANSI encoding on Win32, add on 2018.5.9
 #if defined(_WIN32)
 	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
@@ -862,24 +898,47 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	genaro_upload_opts_t upload_opts = {};
 	upload_opts.prepare_frame_limit = 1,
-		upload_opts.push_frame_limit = 64;
+	upload_opts.push_frame_limit = 64;
 	upload_opts.push_shard_limit = 64;
 	upload_opts.rs = true;
 	upload_opts.bucket_id = bucket_id_dup;
-	if (strlen(index_dup) == 64)
-	{
-		upload_opts.index = index_dup;
-	}
-	else
-	{
-		upload_opts.index = NULL;
-	}
 	upload_opts.file_name = file_name_dup;
 	upload_opts.fd = fd;
+
+	String::Utf8Value index_str(options->Get(Nan::New("index").ToLocalChecked()));
+	const char *index = *index_str;
+	const char *index_dup = strdup(index);
+
+	String::Utf8Value key_str(options->Get(Nan::New("key").ToLocalChecked()));
+	const char *key = *key_str;
+	const char *key_dup = strdup(key);
+
+	String::Utf8Value ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+	const char *ctr = *ctr_str;
+	const char *ctr_dup = strdup(ctr);
+
+	genaro_key_ctr_as_str_t *key_ctr = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
+	key_ctr->key_as_str = key_dup;
+	key_ctr->ctr_as_str = ctr_dup;
+
+	String::Utf8Value rsa_key_str(options->Get(Nan::New("rsaKey").ToLocalChecked()));
+	const char *rsa_key = *rsa_key_str;
+	const char *rsa_key_dup = strdup(rsa_key);
+
+	String::Utf8Value rsa_ctr_str(options->Get(Nan::New("rsaCtr").ToLocalChecked()));
+	const char *rsa_ctr = *rsa_ctr_str;
+	const char *rsa_ctr_dup = strdup(rsa_ctr);
+
+	genaro_key_ctr_as_str_t *rsa_key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
+	rsa_key_ctr_as_str->key_as_str = rsa_key_dup;
+	rsa_key_ctr_as_str->ctr_as_str = rsa_ctr_dup;
 
 	genaro_upload_state_t *state;
 
 	state = genaro_bridge_store_file(env, &upload_opts,
+		index_dup,
+		key_ctr,
+		rsa_key_ctr_as_str,
 		(void *)upload_callbacks,
 		StoreFileProgressCallback,
 		StoreFileFinishedCallback);
@@ -946,11 +1005,11 @@ void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_bridge_resolve_file_cancel(state);
 }
 
-void ResolveFileFinishedCallback(int status, const char *origin_file_path, const char *renamed_file_path, FILE *fd, void *handle)
+void ResolveFileFinishedCallback(int status, const char *file_name, const char *temp_file_name, FILE *fd, void *handle)
 {
 	Nan::HandleScope scope;
 
-	RemoveDownloadingTask(origin_file_path);
+	RemoveDownloadingTask(file_name);
 
 	fclose(fd);
 
@@ -958,7 +1017,7 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 	// the downloaded file to the same file name.
 	if (status == 0)
 	{
-		const char *final_file_path = strdup(origin_file_path);
+		const char *final_file_path = strdup(file_name);
 
 		bool getname_failed = true;
 
@@ -971,10 +1030,10 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 			// failed to delete
 			if (ret != 0)
 			{
-#ifndef _WIN32
+			#ifndef _WIN32
 				char *path_name = dirname((char *)final_file_path);
 				char *file_name = basename((char *)final_file_path);
-#else
+			#else
 				char drive[_MAX_DRIVE];
 				char dir[_MAX_DIR];
 				char fname[_MAX_FNAME];
@@ -983,7 +1042,7 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 				_splitpath(final_file_path, drive, dir, fname, ext);
 				char *path_name = str_concat_many(2, drive, dir);
 				char *file_name = str_concat_many(2, fname, ext);
-#endif
+			#endif
 
 				int index = 1;
 				char temp_str[5];
@@ -991,13 +1050,13 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 				do
 				{
 					sprintf(temp_str, " (%d)", index);
-					char *temp_file_name = RetriveNewName(file_name, temp_str);
+					char *temp_file_name = RetrieveNewName(file_name, temp_str);
 					if (temp_file_name == NULL)
 					{
 						break;
 					}
 
-					free((char *)final_file_path);
+					free((void *)final_file_path);
 					final_file_path = str_concat_many(2, path_name, temp_file_name);
 
 					free(temp_file_name);
@@ -1021,23 +1080,23 @@ void ResolveFileFinishedCallback(int status, const char *origin_file_path, const
 
 		if (!getname_failed)
 		{
-			rename(renamed_file_path, final_file_path);
+			rename(temp_file_name, final_file_path);
 		}
 		else
 		{
-			unlink(renamed_file_path);
+			unlink(temp_file_name);
 		}
 
-		free((char *)final_file_path);
+		free((void *)final_file_path);
 	}
 	else
 	{
 		// download failed, delete the temp file.
-		unlink(renamed_file_path);
+		unlink(temp_file_name);
 	}
 
-	free((char *)origin_file_path);
-	free((char *)renamed_file_path);
+	free((void *)file_name);
+	free((void *)temp_file_name);
 
 	transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = download_callbacks->finished_callback;
@@ -1105,6 +1164,41 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	v8::Local<v8::Object> options = args[3].As<v8::Object>();
 
+	bool hasKey = options->HasOwnProperty(Nan::New("key").ToLocalChecked());
+	bool hasCtr = options->HasOwnProperty(Nan::New("ctr").ToLocalChecked());
+
+	const char *key = NULL;
+	const char *ctr = NULL;
+	const char *key_dup = NULL;
+	const char *ctr_dup = NULL;
+	if(hasKey && hasCtr)
+	{
+		String::Utf8Value key_str(options->Get(Nan::New("key").ToLocalChecked()));
+		key = *key_str;
+
+		if(key && key[0] != '\0')
+		{
+			key_dup = strdup(key);
+		}
+
+		String::Utf8Value ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+		ctr = *ctr_str;
+
+		if(ctr && ctr[0] != '\0')
+		{
+			ctr_dup = strdup(ctr);
+		}
+	}
+
+	genaro_key_ctr_as_str_t *key_ctr_as_str = NULL;
+
+	if(key_dup && ctr_dup)
+	{
+		key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
+		key_ctr_as_str->key_as_str = key_dup;
+		key_ctr_as_str->ctr_as_str = ctr_dup;
+	}
+
 	transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
 	download_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<Function>());
@@ -1147,9 +1241,9 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		}
 	}
 
-	const char *renamed_file_path = str_concat_many(2, file_path_dup, ".genarotmp");
+	const char *temp_file_name = str_concat_many(2, file_path_dup, ".genarotmp");
 
-	fd = fopen(renamed_file_path, "w+");
+	fd = fopen(temp_file_name, "w+");
 
 	if (fd == NULL)
 	{
@@ -1164,14 +1258,15 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 
 	genaro_download_state_t *state = genaro_bridge_resolve_file(env,
-		bucket_id_dup,
-		file_id_dup,
-		file_path_dup,
-		renamed_file_path,
-		fd,
-		(void *)download_callbacks,
-		ResolveFileProgressCallback,
-		ResolveFileFinishedCallback);
+																bucket_id_dup,
+																file_id_dup,
+																key_ctr_as_str,
+																file_path_dup,
+																temp_file_name,
+																fd,
+																(void *)download_callbacks,
+																ResolveFileProgressCallback,
+																ResolveFileFinishedCallback);
 	if (!state)
 	{
 		return Nan::ThrowError("Unable to create download state");
@@ -1184,9 +1279,9 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	downloading_task_t task;
 #ifdef _WIN32
-	task.full_path = ConvertToWindowsPath(state->origin_file_path);
+	task.full_path = ConvertToWindowsPath(state->file_name);
 #else
-	task.full_path = strdup(state->origin_file_path);
+	task.full_path = strdup(state->file_name);
 #endif
 
 	downloading_task_list.push_back(task);
@@ -1275,74 +1370,13 @@ void DecryptName(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *encrypted_name = *encrypted_name_str;
 	const char *encrypted_name_dup = strdup(encrypted_name);
 
-	char *decrypted_name = genaro_bridge_decrypt_name(env, encrypted_name_dup);
+	char *decrypted_name = genaro_decrypt_name(env, encrypted_name_dup);
 
 	if (decrypted_name)
 	{
 		// return the decrypted name to nodejs.
 		args.GetReturnValue().Set(Nan::New(decrypted_name).ToLocalChecked());
 	}
-}
-
-void ShareFileCallback(uv_work_t *work_req, int status)
-{
-	Nan::HandleScope scope;
-
-	json_request_t *req = (json_request_t *)work_req->data;
-
-	Nan::Callback *callback = (Nan::Callback *)req->handle;
-	Local<Value> error = Nan::Null();
-
-	error_and_status_check<json_request_t>(req, &error);
-
-	Local<Value> argv[] = {
-		error };
-
-	callback->Call(1, argv);
-
-	free(req);
-	free(work_req);
-}
-
-// use user's share public key to encrypt the file encryption key, and store to bridge.
-void ShareFile(const Nan::FunctionCallbackInfo<Value> &args)
-{
-	if (args.Length() != 6 || !args[5]->IsFunction())
-	{
-		return Nan::ThrowError("Unexpected arguments");
-	}
-	if (args.This()->InternalFieldCount() != 1)
-	{
-		return Nan::ThrowError("Environment not available for instance");
-	}
-
-	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
-	if (!env)
-	{
-		return Nan::ThrowError("Environment is not initialized");
-	}
-
-	String::Utf8Value bucket_id_str(args[0]);
-	const char *bucket_id = *bucket_id_str;
-	const char *bucket_id_dup = strdup(bucket_id);
-
-	String::Utf8Value file_id_str(args[1]);
-	const char *file_id = *file_id_str;
-	const char *file_id_dup = strdup(file_id);
-
-	String::Utf8Value decrypted_file_name_str(args[2]);
-	const char *decrypted_file_name = *decrypted_file_name_str;
-	const char *decrypted_file_name_dup = strdup(decrypted_file_name);
-
-	String::Utf8Value to_address_str(args[3]);
-	const char *to_address = *to_address_str;
-	const char *to_address_dup = strdup(to_address);
-
-	double price = args[4]->NumberValue();
-
-	Nan::Callback *callback = new Nan::Callback(args[5].As<Function>());
-
-	genaro_bridge_share_file(env, bucket_id_dup, file_id_dup, decrypted_file_name_dup, to_address, price, (void *)callback, ShareFileCallback);
 }
 
 void RegisterCallback(uv_work_t *work_req, int status)
@@ -1424,8 +1458,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> key_file = options->Get(Nan::New("keyFile").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> passphrase = options->Get(Nan::New("passphrase").ToLocalChecked()).As<v8::String>();
-	// TODO(dingyi): modify the name
-	v8::Local<v8::String> sharePrivateKey = options->Get(Nan::New("sharePrivateKey").ToLocalChecked()).As<v8::String>();
 	Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
 	Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
 
@@ -1439,6 +1471,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	Nan::SetPrototypeMethod(constructor, "deleteBucket", DeleteBucket);
 	Nan::SetPrototypeMethod(constructor, "renameBucket", RenameBucket);
 	Nan::SetPrototypeMethod(constructor, "listFiles", ListFiles);
+	Nan::SetPrototypeMethod(constructor, "generateEncryptionInfo", GenerateEncryptionInfo);
 	Nan::SetPrototypeMethod(constructor, "storeFile", StoreFile);
 	Nan::SetPrototypeMethod(constructor, "storeFileCancel", StoreFileCancel);
 	Nan::SetPrototypeMethod(constructor, "resolveFile", ResolveFile);
@@ -1463,7 +1496,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	}
 
 	// Bridge URL handling
-
 	String::Utf8Value _bridgeUrl(bridgeUrl);
 	const char *url = *_bridgeUrl;
 	char proto[6];
@@ -1487,8 +1519,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	const char *_key_file = *_keyFileObj;
 	String::Utf8Value _passphraseObj(passphrase);
 	const char *_passphrase = *_passphraseObj;
-	String::Utf8Value _sharePrivateKeyObj(sharePrivateKey);
-	const char *_sharePrivateKey = *_sharePrivateKeyObj;
 
 	// Setup option structs
 	genaro_bridge_options_t bridge_options = {};
@@ -1506,9 +1536,6 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	genaro_encrypt_options_t encrypt_options;
 	genaro_key_result_to_encrypt_options(key_result, &encrypt_options);
 	json_object_put(key_json_obj);
-
-	genaro_share_prikey_options_t sharePrikey_options;
-	sharePrikey_options.priv_key = _sharePrivateKey;
 
 	genaro_http_options_t http_options = {};
 	if (!user_agent.ToLocalChecked()->IsNullOrUndefined())
@@ -1536,9 +1563,10 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	// Initialize environment
 	genaro_env_t *env = genaro_init_env(&bridge_options,
 		&encrypt_options,
-		&sharePrikey_options,
 		&http_options,
-		&log_options);
+		&log_options,
+		true);
+
 	free(encrypt_options.priv_key);
 
 	if (!env)
