@@ -737,7 +737,7 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 	}
 }
 
-void StoreFileProgressCallback(double progress, double speed, uint64_t file_bytes, void *handle)
+void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
 {
 	Nan::HandleScope scope;
 
@@ -745,15 +745,13 @@ void StoreFileProgressCallback(double progress, double speed, uint64_t file_byte
 	Nan::Callback *callback = upload_callbacks->progress_callback;
 
 	Local<Number> progress_local = Nan::New(progress);
-	Local<Number> speed_local = Nan::New(speed);
 	Local<Number> file_bytes_local = Nan::New((double)file_bytes);
 
 	Local<Value> argv[] = {
 		progress_local,
-		speed_local,
 		file_bytes_local };
 
-	callback->Call(3, argv);
+	callback->Call(2, argv);
 }
 
 template <class StateType>
@@ -1111,7 +1109,7 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 	callback->Call(1, argv);
 }
 
-void ResolveFileProgressCallback(double progress, double speed, uint64_t file_bytes, void *handle)
+void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
 {
 	Nan::HandleScope scope;
 
@@ -1119,15 +1117,13 @@ void ResolveFileProgressCallback(double progress, double speed, uint64_t file_by
 	Nan::Callback *callback = download_callbacks->progress_callback;
 
 	Local<Number> progress_local = Nan::New(progress);
-	Local<Number> speed_local = Nan::New(speed);
 	Local<Number> file_bytes_local = Nan::New((double)file_bytes);
 
 	Local<Value> argv[] = {
 		progress_local,
-		speed_local,
 		file_bytes_local };
 
-	callback->Call(3, argv);
+	callback->Call(2, argv);
 }
 
 void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
