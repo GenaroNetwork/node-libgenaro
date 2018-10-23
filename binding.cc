@@ -807,7 +807,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 	String::Utf8Value bucket_id_str(args[0]);
 	const char *bucket_id = *bucket_id_str;
 
-	genaro_encryption_info_t *encryption_info = genaro_generate_encryption_info(env, bucket_id);
+	genaro_encryption_info_t *encryption_info = genaro_generate_encryption_info(env, NULL, bucket_id);
 
 	if (encryption_info)
 	{

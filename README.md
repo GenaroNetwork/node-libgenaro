@@ -36,9 +36,9 @@ const bucketId = '368be0816766b28fd5f43af5';
 const filePath = './test-upload.data';
 
 const keyCtr = env.generateEncryptionInfo(bucketId);
-const index = keyCtr['index'];
-const key = keyCtr['key'];
-const ctr = keyCtr['ctr'];
+const index = keyCtr.index;
+const key = keyCtr.key;
+const ctr = keyCtr.ctr;
 
 const rsaKey = xxxxxx; // encrypted key with rsa
 const rsaCtr = xxxxxx; // encrypted ctr with rsa
