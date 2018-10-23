@@ -9,4 +9,4 @@ node_modules/*
 genaro-test-download.data
 genaro-test-upload.data
 libgenaro*
-mytest.js
+mytest*.js
