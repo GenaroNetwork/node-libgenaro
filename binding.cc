@@ -90,7 +90,6 @@ char *RetrieveNewName(const char *fileName, const char *extra)
 	}
 
 	int len = strlen(fileName);
-	int extra_len = extra ? strlen(extra) : 0;
 	char *retName = NULL;
 
 	int dotIndex = len;
@@ -287,7 +286,7 @@ void GetInfoCallback(uv_work_t *work_req, int status)
 		error,
 		result };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 
 	free(req);
 	free(work_req);
@@ -361,7 +360,7 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
 		error,
 		buckets_value };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 
 	free(req);
 	free(work_req);
@@ -425,7 +424,7 @@ void ListFilesCallback(uv_work_t *work_req, int status)
 		error,
 		files_value };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 
 	free(req);
 	free(work_req);
@@ -448,7 +447,7 @@ void ListFiles(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value str(args[0]);
+	Nan::Utf8String str(args[0]);
 	const char *bucket_id = *str;
 	const char *bucket_id_dup = strdup(bucket_id);
 
@@ -481,7 +480,7 @@ void CreateBucketCallback(uv_work_t *work_req, int status)
 		error,
 		bucket_value };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 
 	free(req);
 	free(work_req);
@@ -504,7 +503,7 @@ void CreateBucket(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value str(args[0]);
+	Nan::Utf8String str(args[0]);
 	const char *name = *str;
 	const char *name_dup = strdup(name);
 
@@ -527,7 +526,7 @@ void DeleteBucketCallback(uv_work_t *work_req, int status)
 	Local<Value> argv[] = {
 		error };
 
-	callback->Call(1, argv);
+	Nan::Call(*callback, 1, argv);
 
 	free(req);
 	free(work_req);
@@ -550,7 +549,7 @@ void DeleteBucket(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value str(args[0]);
+	Nan::Utf8String str(args[0]);
 	const char *id = *str;
 	const char *id_dup = strdup(id);
 
@@ -574,7 +573,7 @@ void RenameBucketCallback(uv_work_t *work_req, int status)
 	Local<Value> argv[] = {
 		error };
 
-	callback->Call(1, argv);
+	Nan::Call(*callback, 1, argv);
 
 	free(req);
 	free(work_req);
@@ -597,11 +596,11 @@ void RenameBucket(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value id_str(args[0]);
+	Nan::Utf8String id_str(args[0]);
 	const char *id = *id_str;
 	const char *id_dup = strdup(id);
 
-	String::Utf8Value name_str(args[1]);
+	Nan::Utf8String name_str(args[1]);
 	const char *name = *name_str;
 	const char *name_dup = strdup(name);
 
@@ -729,7 +728,7 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 		error,
 		file_id_local };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 
 	if (file_id)
 	{
@@ -751,7 +750,7 @@ void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handl
 		progress_local,
 		file_bytes_local };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 }
 
 template <class StateType>
@@ -804,7 +803,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value bucket_id_str(args[0]);
+	Nan::Utf8String bucket_id_str(args[0]);
 	const char *bucket_id = *bucket_id_str;
 
 	genaro_encryption_info_t *encryption_info = genaro_generate_encryption_info(env, NULL, bucket_id);
@@ -842,11 +841,11 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value bucket_id_str(args[0]);
+	Nan::Utf8String bucket_id_str(args[0]);
 	const char *bucket_id = *bucket_id_str;
 	const char *bucket_id_dup = strdup(bucket_id);
 
-	String::Utf8Value file_path_str(args[1]);
+	Nan::Utf8String file_path_str(args[1]);
 	const char *file_path = *file_path_str;
 
 	v8::Local<v8::Object> options = args[2].As<v8::Object>();
@@ -856,7 +855,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	upload_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<Function>());
 	upload_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<Function>());
 
-	String::Utf8Value file_name_str(options->Get(Nan::New("filename").ToLocalChecked()).As<v8::String>());
+	Nan::Utf8String file_name_str(options->Get(Nan::New("filename").ToLocalChecked()).As<v8::String>());
 	const char *file_name = *file_name_str;
 	const char *file_name_dup = strdup(file_name);
 
@@ -869,7 +868,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 			error,
 			Nan::Null() };
 
-		upload_callbacks->finished_callback->Call(2, argv);
+		Nan::Call(*(upload_callbacks->finished_callback), 2, argv);
 
 		return;
 	}
@@ -891,7 +890,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 			error,
 			Nan::Null() };
 
-		upload_callbacks->finished_callback->Call(2, argv);
+		Nan::Call(*(upload_callbacks->finished_callback), 2, argv);
 
 		return;
 	}
@@ -905,15 +904,15 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	upload_opts.file_name = file_name_dup;
 	upload_opts.fd = fd;
 
-	String::Utf8Value index_str(options->Get(Nan::New("index").ToLocalChecked()));
+	Nan::Utf8String index_str(options->Get(Nan::New("index").ToLocalChecked()));
 	const char *index = *index_str;
 	const char *index_dup = strdup(index);
 
-	String::Utf8Value key_str(options->Get(Nan::New("key").ToLocalChecked()));
+	Nan::Utf8String key_str(options->Get(Nan::New("key").ToLocalChecked()));
 	const char *key = *key_str;
 	const char *key_dup = strdup(key);
 
-	String::Utf8Value ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+	Nan::Utf8String ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
 	const char *ctr = *ctr_str;
 	const char *ctr_dup = strdup(ctr);
 
@@ -921,11 +920,11 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	key_ctr->key_as_str = key_dup;
 	key_ctr->ctr_as_str = ctr_dup;
 
-	String::Utf8Value rsa_key_str(options->Get(Nan::New("rsaKey").ToLocalChecked()));
+	Nan::Utf8String rsa_key_str(options->Get(Nan::New("rsaKey").ToLocalChecked()));
 	const char *rsa_key = *rsa_key_str;
 	const char *rsa_key_dup = strdup(rsa_key);
 
-	String::Utf8Value rsa_ctr_str(options->Get(Nan::New("rsaCtr").ToLocalChecked()));
+	Nan::Utf8String rsa_ctr_str(options->Get(Nan::New("rsaCtr").ToLocalChecked()));
 	const char *rsa_ctr = *rsa_ctr_str;
 	const char *rsa_ctr_dup = strdup(rsa_ctr);
 
@@ -1106,7 +1105,7 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 	Local<Value> argv[] = {
 		error };
 
-	callback->Call(1, argv);
+	Nan::Call(*callback, 1, argv);
 }
 
 void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
@@ -1123,7 +1122,7 @@ void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *han
 		progress_local,
 		file_bytes_local };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 }
 
 void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
@@ -1143,15 +1142,15 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value bucket_id_str(args[0]);
+	Nan::Utf8String bucket_id_str(args[0]);
 	const char *bucket_id = *bucket_id_str;
 	const char *bucket_id_dup = strdup(bucket_id);
 
-	String::Utf8Value file_id_str(args[1]);
+	Nan::Utf8String file_id_str(args[1]);
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
 
-	String::Utf8Value file_path_str(args[2]);
+	Nan::Utf8String file_path_str(args[2]);
 	const char *file_path = *file_path_str;
 
 	//convert to ANSI encoding on Win32, add on 2018.5.9
@@ -1164,8 +1163,8 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	v8::Local<v8::Object> options = args[3].As<v8::Object>();
 
-	bool hasKey = options->HasOwnProperty(Nan::New("key").ToLocalChecked());
-	bool hasCtr = options->HasOwnProperty(Nan::New("ctr").ToLocalChecked());
+	bool hasKey = Nan::HasOwnProperty(options, Nan::New("key").ToLocalChecked()).FromJust();
+	bool hasCtr = Nan::HasOwnProperty(options, Nan::New("ctr").ToLocalChecked()).FromJust();
 
 	const char *key = NULL;
 	const char *ctr = NULL;
@@ -1173,7 +1172,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *ctr_dup = NULL;
 	if(hasKey && hasCtr)
 	{
-		String::Utf8Value key_str(options->Get(Nan::New("key").ToLocalChecked()));
+		Nan::Utf8String key_str(options->Get(Nan::New("key").ToLocalChecked()));
 		key = *key_str;
 
 		if(key && key[0] != '\0')
@@ -1181,7 +1180,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 			key_dup = strdup(key);
 		}
 
-		String::Utf8Value ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
+		Nan::Utf8String ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
 		ctr = *ctr_str;
 
 		if(ctr && ctr[0] != '\0')
@@ -1211,7 +1210,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		Local<Value> argv[] = {
 			error };
 
-		download_callbacks->finished_callback->Call(1, argv);
+		Nan::Call(*(download_callbacks->finished_callback), 1, argv);
 
 		return;
 	}
@@ -1235,7 +1234,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 			Local<Value> argv[] = {
 				error };
 
-			download_callbacks->finished_callback->Call(1, argv);
+			Nan::Call(*(download_callbacks->finished_callback), 1, argv);
 
 			return;
 		}
@@ -1252,7 +1251,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		Local<Value> argv[] = {
 			error };
 
-		download_callbacks->finished_callback->Call(1, argv);
+		Nan::Call(*(download_callbacks->finished_callback), 1, argv);
 
 		return;
 	}
@@ -1313,7 +1312,7 @@ void DeleteFileCallback(uv_work_t *work_req, int status)
 	Local<Value> argv[] = {
 		error };
 
-	callback->Call(1, argv);
+	Nan::Call(*callback, 1, argv);
 
 	free(req);
 	free(work_req);
@@ -1336,11 +1335,11 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value bucket_id_str(args[0]);
+	Nan::Utf8String bucket_id_str(args[0]);
 	const char *bucket_id = *bucket_id_str;
 	const char *bucket_id_dup = strdup(bucket_id);
 
-	String::Utf8Value file_id_str(args[1]);
+	Nan::Utf8String file_id_str(args[1]);
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
 
@@ -1366,7 +1365,7 @@ void DecryptName(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	String::Utf8Value encrypted_name_str(args[0]);
+	Nan::Utf8String encrypted_name_str(args[0]);
 	const char *encrypted_name = *encrypted_name_str;
 	const char *encrypted_name_dup = strdup(encrypted_name);
 
@@ -1406,7 +1405,7 @@ void RegisterCallback(uv_work_t *work_req, int status)
 		error,
 		result };
 
-	callback->Call(2, argv);
+	Nan::Call(*callback, 2, argv);
 
 	free(req);
 	free(work_req);
@@ -1496,7 +1495,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	}
 
 	// Bridge URL handling
-	String::Utf8Value _bridgeUrl(bridgeUrl);
+	Nan::Utf8String _bridgeUrl(bridgeUrl);
 	const char *url = *_bridgeUrl;
 	char proto[6];
 	char host[100];
@@ -1515,9 +1514,9 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	}
 
 	// V8 types to C types
-	String::Utf8Value _keyFileObj(key_file);
+	Nan::Utf8String _keyFileObj(key_file);
 	const char *_key_file = *_keyFileObj;
-	String::Utf8Value _passphraseObj(passphrase);
+	Nan::Utf8String _passphraseObj(passphrase);
 	const char *_passphrase = *_passphraseObj;
 
 	// Setup option structs
@@ -1540,7 +1539,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	genaro_http_options_t http_options = {};
 	if (!user_agent.ToLocalChecked()->IsNullOrUndefined())
 	{
-		String::Utf8Value str(user_agent.ToLocalChecked());
+		Nan::Utf8String str(user_agent.ToLocalChecked());
 		http_options.user_agent = strdup(*str);
 	}
 	else
