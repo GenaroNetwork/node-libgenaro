@@ -707,7 +707,7 @@ bool IsDownloading(const char *full_path)
 	return false;
 }
 
-void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int status, char *file_id, void *handle)
+void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int status, char *file_id, uint64_t total_bytes, char *sha256, void *handle)
 {
 	Nan::HandleScope scope;
 
@@ -717,22 +717,32 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 	Nan::Callback *callback = upload_callbacks->finished_callback;
 
 	Local<Value> file_id_local = Nan::Null();
+	Local<Value> total_bytes_local = Nan::Null();
+	Local<Value> sha256_local = Nan::Null();
 	if (status == 0)
 	{
 		file_id_local = Nan::New(file_id).ToLocalChecked();
+		total_bytes_local = Nan::New((double)total_bytes);
+		sha256_local = Nan::New(sha256).ToLocalChecked();
 	}
 
 	Local<Value> error = IntToGenaroError(status);
 
 	Local<Value> argv[] = {
 		error,
-		file_id_local };
+		file_id_local,
+		total_bytes_local,
+		sha256_local };
 
-	Nan::Call(*callback, 2, argv);
+	Nan::Call(*callback, 4, argv);
 
 	if (file_id)
 	{
 		free(file_id);
+	}
+	if (sha256)
+	{
+		free(sha256);
 	}
 }
 
@@ -1004,7 +1014,7 @@ void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_bridge_resolve_file_cancel(state);
 }
 
-void ResolveFileFinishedCallback(int status, const char *file_name, const char *temp_file_name, FILE *fd, void *handle)
+void ResolveFileFinishedCallback(int status, const char *file_name, const char *temp_file_name, FILE *fd, uint64_t total_bytes, char *sha256, void *handle)
 {
 	Nan::HandleScope scope;
 
@@ -1100,12 +1110,22 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 	transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = download_callbacks->finished_callback;
 
+	Local<Value> total_bytes_local = Nan::Null();
+	Local<Value> sha256_local = Nan::Null();
+	if (status == 0)
+	{
+		total_bytes_local = Nan::New((double)total_bytes);
+		sha256_local = Nan::New(sha256).ToLocalChecked();
+	}
+
 	Local<Value> error = IntToGenaroError(status);
 
 	Local<Value> argv[] = {
-		error };
+		error,
+		total_bytes_local,
+		sha256_local };
 
-	Nan::Call(*callback, 1, argv);
+	Nan::Call(*callback, 3, argv);
 }
 
 void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
