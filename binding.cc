@@ -834,6 +834,44 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 }
 
+// void EncryptData(const Nan::FunctionCallbackInfo<Value> &args)
+// {
+// 	if (args.Length() != 1)
+// 	{
+// 		return Nan::ThrowError("Unexpected arguments");
+// 	}
+// 	if (args.This()->InternalFieldCount() != 1)
+// 	{
+// 		return Nan::ThrowError("Environment not available for instance");
+// 	}
+
+// 	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+// 	if (!env)
+// 	{
+// 		return Nan::ThrowError("Environment is not initialized");
+// 	}
+
+// 	Nan::Utf8String bucket_id_str(args[0]);
+// 	const char *bucket_id = *bucket_id_str;
+
+// 	genaro_encryption_info_t *encryption_info = genaro_generate_encryption_info(env, NULL, bucket_id);
+
+// 	if (encryption_info)
+// 	{
+// 		Local<Object> encryption = Nan::New<Object>();
+// 		encryption->Set(Nan::New("index").ToLocalChecked(), Nan::New(encryption_info->index).ToLocalChecked());
+// 		free(encryption_info->index);
+// 		encryption->Set(Nan::New("key").ToLocalChecked(), Nan::New(encryption_info->key_ctr_as_str->key_as_str).ToLocalChecked());
+// 		free((void *)encryption_info->key_ctr_as_str->key_as_str);
+// 		encryption->Set(Nan::New("ctr").ToLocalChecked(), Nan::New(encryption_info->key_ctr_as_str->ctr_as_str).ToLocalChecked());
+// 		free((void *)encryption_info->key_ctr_as_str->ctr_as_str);
+// 		free(encryption_info->key_ctr_as_str);
+// 		free(encryption_info);
+
+// 		args.GetReturnValue().Set(encryption);
+// 	}
+// }
+
 void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
 	if (args.Length() != 3)
@@ -1243,6 +1281,14 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		overwrite = To<bool>(overwriteOption.ToLocalChecked()).FromJust();
 	}
 
+	Nan::MaybeLocal<Value> decryptOption = options->Get(Nan::New("decrypt").ToLocalChecked());
+
+	bool decrypt = true;
+	if (!decryptOption.IsEmpty())
+	{
+		decrypt = To<bool>(decryptOption.ToLocalChecked()).FromJust();
+	}
+
 	FILE *fd = NULL;
 
 	if (access(file_path_dup, F_OK) != -1)
@@ -1283,6 +1329,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 																file_path_dup,
 																temp_file_name,
 																fd,
+																true,
 																(void *)download_callbacks,
 																ResolveFileProgressCallback,
 																ResolveFileFinishedCallback);
