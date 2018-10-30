@@ -874,7 +874,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 
 void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 {
-	if (args.Length() != 3)
+	if (args.Length() != 4)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
@@ -893,10 +893,13 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *bucket_id = *bucket_id_str;
 	const char *bucket_id_dup = strdup(bucket_id);
 
-	Nan::Utf8String file_path_str(args[1]);
-	const char *file_path = *file_path_str;
+	Nan::Utf8String file_or_data_str(args[1]);
+	const char *file_or_data = *file_or_data_str;
 
-	v8::Local<v8::Object> options = args[2].As<v8::Object>();
+ 	v8::Local<v8::Boolean> is_file_path_local = v8::Local<v8::Boolean>::Cast(args[2]); 
+    bool is_file_path = is_file_path_local->BooleanValue();
+
+	v8::Local<v8::Object> options = args[3].As<v8::Object>();
 
 	transfer_callbacks_t *upload_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
@@ -919,6 +922,50 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		Nan::Call(*(upload_callbacks->finished_callback), 2, argv);
 
 		return;
+	}
+
+	const char *file_path = NULL;
+
+	if(is_file_path)
+	{
+		file_path = file_or_data;
+	}
+	else
+	{
+		char *tmp_path = NULL;
+    	struct stat sb;
+		if (getenv("GENARO_TEMP") &&
+					stat(getenv("GENARO_TEMP"), &sb) == 0 &&
+					S_ISDIR(sb.st_mode)) {
+			tmp_path = getenv("GENARO_TEMP");
+		#ifdef _WIN32
+		} else if (getenv("TEMP") &&
+					stat(getenv("TEMP"), &sb) == 0 &&
+					S_ISDIR(sb.st_mode)) {
+			tmp_path = getenv("TEMP");
+		#else
+		} else if ("/tmp" && stat("/tmp", &sb) == 0 && S_ISDIR(sb.st_mode)) {
+			tmp_path = "/tmp";
+		#endif
+		} else {
+			return Nan::ThrowError("Get temp path failed");
+		}
+
+		char *temp_file_path = str_concat_many(2, tmp_path, "/tmp-XXXXXX");
+		int fd = mkstemp(temp_file_path);
+		if(fd == -1)
+		{
+			return Nan::ThrowError("Create temp file failed");
+		}
+
+		size_t len = strlen(file_or_data);
+		if(write(fd, file_or_data, len) != len)
+		{
+			close(fd);
+			return Nan::ThrowError("Write data to file failed");
+		}
+		close(fd);
+		file_path = temp_file_path;
 	}
 
 	//convert to ANSI encoding on Win32, add on 2018.5.9
@@ -1058,7 +1105,9 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 
 	RemoveDownloadingTask(file_name);
 
-	fclose(fd);
+	if(!fd) {
+		fclose(fd);
+	}
 
 	// download success, remove the original file, and rename
 	// the downloaded file to the same file name.
@@ -1329,7 +1378,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 																file_path_dup,
 																temp_file_name,
 																fd,
-																true,
+																decrypt,
 																(void *)download_callbacks,
 																ResolveFileProgressCallback,
 																ResolveFileFinishedCallback);
@@ -1362,6 +1411,55 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		StateStatusErrorGetter<genaro_download_state_t>);
 
 	args.GetReturnValue().Set(state_local);
+}
+
+// decrypt the downloaded but not decrypted file
+void DecryptFile(const Nan::FunctionCallbackInfo<Value> &args)
+{
+	if (args.Length() != 3)
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+	if (args.This()->InternalFieldCount() != 1)
+	{
+		return Nan::ThrowError("Environment not available for instance");
+	}
+
+	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+	if (!env)
+	{
+		return Nan::ThrowError("Environment is not initialized");
+	}
+
+	Nan::Utf8String file_path_str(args[0]);
+	const char *file_path = *file_path_str;
+
+	//convert to ANSI encoding on Win32
+#if defined(_WIN32)
+	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
+	file_path = u_p.get();
+#endif
+
+	Nan::Utf8String key_str(args[1]);
+	const char *key = *key_str;
+	Nan::Utf8String ctr_str(args[2]);
+	const char *ctr = *ctr_str;
+
+	genaro_key_ctr_as_str_t *key_ctr_as_str = NULL;
+	key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
+	key_ctr_as_str->key_as_str = key;
+	key_ctr_as_str->ctr_as_str = ctr;
+
+	char *decryptedMeta = genaro_decrypt_file(env, file_path, key_ctr_as_str);
+	free((void *)key_ctr_as_str);
+
+	if(!decryptedMeta) {
+		return;
+	}
+
+	// return the decrypted meta
+	args.GetReturnValue().Set(Nan::New(decryptedMeta).ToLocalChecked());
+	free(decryptedMeta);
 }
 
 // TODO: this is the same as DeleteBucketCallback; refactor
@@ -1415,7 +1513,7 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *)callback, DeleteFileCallback);
 }
 
-void DecryptName(const Nan::FunctionCallbackInfo<Value> &args)
+void EncryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
 {
 	if (args.Length() != 1)
 	{
@@ -1432,16 +1530,153 @@ void DecryptName(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	Nan::Utf8String encrypted_name_str(args[0]);
-	const char *encrypted_name = *encrypted_name_str;
-	const char *encrypted_name_dup = strdup(encrypted_name);
+	Nan::Utf8String meta_str(args[0]);
+	const char *meta = *meta_str;
 
-	char *decrypted_name = genaro_decrypt_name(env, encrypted_name_dup);
+	char *encrypted_meta = genaro_encrypt_meta(env, meta);
 
-	if (decrypted_name)
+	if (encrypted_meta)
 	{
-		// return the decrypted name to nodejs.
-		args.GetReturnValue().Set(Nan::New(decrypted_name).ToLocalChecked());
+		// return the encrypted meta.
+		args.GetReturnValue().Set(Nan::New(encrypted_meta).ToLocalChecked());
+	}
+}
+
+void EncryptMetaToFile(const Nan::FunctionCallbackInfo<Value> &args)
+{
+	if (args.Length() != 2)
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+	if (args.This()->InternalFieldCount() != 1)
+	{
+		return Nan::ThrowError("Environment not available for instance");
+	}
+
+	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+	if (!env)
+	{
+		return Nan::ThrowError("Environment is not initialized");
+	}
+
+	Nan::Utf8String meta_str(args[0]);
+	const char *meta = *meta_str;
+
+	char *encrypted_meta = genaro_encrypt_meta(env, meta);
+
+	Nan::Utf8String file_path_str(args[1]);
+	const char *file_path = *file_path_str;
+
+	//convert to ANSI encoding on Win32
+#if defined(_WIN32)
+	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
+	file_path = u_p.get();
+#endif
+
+	bool ret = false;
+	if (encrypted_meta) {
+		FILE *fd = fopen(file_path, "w+");
+		if(fd) {
+			fwrite(encrypted_meta, strlen(encrypted_meta), sizeof(char), fd);
+			fclose(fd);
+			ret = true;
+		}
+	}
+
+	args.GetReturnValue().Set(Nan::New(ret));
+}
+
+void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
+{
+	if (args.Length() != 1)
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+	if (args.This()->InternalFieldCount() != 1)
+	{
+		return Nan::ThrowError("Environment not available for instance");
+	}
+
+	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+	if (!env)
+	{
+		return Nan::ThrowError("Environment is not initialized");
+	}
+
+	Nan::Utf8String encrypted_meta_str(args[0]);
+	const char *encrypted_meta = *encrypted_meta_str;
+
+	char *decrypted_meta = genaro_decrypt_meta(env, encrypted_meta);
+
+	if (decrypted_meta)
+	{
+		// return the decrypted meta.
+		args.GetReturnValue().Set(Nan::New(decrypted_meta).ToLocalChecked());
+	}
+}
+
+void DecryptMetaFromFile(const Nan::FunctionCallbackInfo<Value> &args)
+{
+	if (args.Length() != 1)
+	{
+		return Nan::ThrowError("Unexpected arguments");
+	}
+	if (args.This()->InternalFieldCount() != 1)
+	{
+		return Nan::ThrowError("Environment not available for instance");
+	}
+
+	genaro_env_t *env = (genaro_env_t *)args.This()->GetAlignedPointerFromInternalField(0);
+	if (!env)
+	{
+		return Nan::ThrowError("Environment is not initialized");
+	}
+
+	Nan::Utf8String file_path_str(args[0]);
+	const char *file_path = *file_path_str;
+
+	//convert to ANSI encoding on Win32
+#if defined(_WIN32)
+	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
+	file_path = u_p.get();
+#endif
+
+	FILE *fp;
+    fp = fopen(file_path, "r");
+    if (fp == NULL) {
+		return;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *buffer = (char *)calloc(fsize + 1, sizeof(char));
+    if (buffer == NULL) {
+		return;
+    }
+
+    size_t read_blocks = 0;
+    while ((!feof(fp)) && (!ferror(fp))) {
+        read_blocks = fread(buffer + read_blocks, 1, fsize, fp);
+        if (read_blocks <= 0) {
+            break;
+        }
+    }
+
+    int error = ferror(fp);
+    fclose(fp);
+
+    if (error) {
+		free(buffer);
+		return;
+    }
+
+	char *decrypted_meta = genaro_decrypt_meta(env, buffer);
+	free(buffer);
+
+	if(decrypted_meta) {
+		args.GetReturnValue().Set(Nan::New(decrypted_meta).ToLocalChecked());
 	}
 }
 
@@ -1543,7 +1778,11 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	Nan::SetPrototypeMethod(constructor, "resolveFile", ResolveFile);
 	Nan::SetPrototypeMethod(constructor, "resolveFileCancel", ResolveFileCancel);
 	Nan::SetPrototypeMethod(constructor, "deleteFile", DeleteFile);
-	Nan::SetPrototypeMethod(constructor, "decryptName", DecryptName);
+	Nan::SetPrototypeMethod(constructor, "encryptMeta", EncryptMeta);
+	Nan::SetPrototypeMethod(constructor, "encryptMetaToFile", EncryptMetaToFile);
+	Nan::SetPrototypeMethod(constructor, "decryptMeta", DecryptMeta);
+	Nan::SetPrototypeMethod(constructor, "decryptMetaFromFile", DecryptMetaFromFile);
+	Nan::SetPrototypeMethod(constructor, "decryptFile", DecryptFile);
 	Nan::SetPrototypeMethod(constructor, "destroy", DestroyEnvironment);
 
 	Nan::MaybeLocal<v8::Object> maybeInstance;
