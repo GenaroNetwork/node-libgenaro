@@ -254,7 +254,7 @@ void Timestamp(const v8::FunctionCallbackInfo<Value> &args)
 	Isolate *isolate = args.GetIsolate();
 
 	uint64_t timestamp = genaro_util_timestamp();
-	Local<Number> timestamp_local = Number::New(isolate, timestamp);
+	Local<Number> timestamp_local = Number::New(isolate, (double)timestamp);
 
 	args.GetReturnValue().Set(timestamp_local);
 }
@@ -707,7 +707,7 @@ bool IsDownloading(const char *full_path)
 	return false;
 }
 
-void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int status, char *file_id, uint64_t total_bytes, char *sha256, void *handle)
+void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int status, char *file_id, uint64_t file_bytes, char *sha256_of_encrypted, void *handle)
 {
 	Nan::HandleScope scope;
 
@@ -717,13 +717,13 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 	Nan::Callback *callback = upload_callbacks->finished_callback;
 
 	Local<Value> file_id_local = Nan::Null();
-	Local<Value> total_bytes_local = Nan::Null();
-	Local<Value> sha256_local = Nan::Null();
+	Local<Value> file_bytes_local = Nan::Null();
+	Local<Value> sha256_of_encrypted_local = Nan::Null();
 	if (status == 0)
 	{
 		file_id_local = Nan::New(file_id).ToLocalChecked();
-		total_bytes_local = Nan::New((double)total_bytes);
-		sha256_local = Nan::New(sha256).ToLocalChecked();
+		file_bytes_local = Nan::New((double)file_bytes);
+		sha256_of_encrypted_local = Nan::New(sha256_of_encrypted).ToLocalChecked();
 	}
 
 	Local<Value> error = IntToGenaroError(status);
@@ -731,19 +731,13 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 	Local<Value> argv[] = {
 		error,
 		file_id_local,
-		total_bytes_local,
-		sha256_local };
+		file_bytes_local,
+		sha256_of_encrypted_local };
 
 	Nan::Call(*callback, 4, argv);
 
-	if (file_id)
-	{
-		free(file_id);
-	}
-	if (sha256)
-	{
-		free(sha256);
-	}
+	free(file_id);
+	free(sha256_of_encrypted);
 }
 
 void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handle)
@@ -932,27 +926,38 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 	else
 	{
-		char *tmp_path = NULL;
-    	struct stat sb;
-		if (getenv("GENARO_TEMP") &&
-					stat(getenv("GENARO_TEMP"), &sb) == 0 &&
-					S_ISDIR(sb.st_mode)) {
+		const char *tmp_path = NULL;
+		if (getenv("GENARO_TEMP") && !access(getenv("GENARO_TEMP"), F_OK)) {
 			tmp_path = getenv("GENARO_TEMP");
 		#ifdef _WIN32
-		} else if (getenv("TEMP") &&
-					stat(getenv("TEMP"), &sb) == 0 &&
-					S_ISDIR(sb.st_mode)) {
+		} else if (getenv("TEMP") && !access(getenv("TEMP"), F_OK)) {
 			tmp_path = getenv("TEMP");
 		#else
-		} else if ("/tmp" && stat("/tmp", &sb) == 0 && S_ISDIR(sb.st_mode)) {
+		} else if ("/tmp" && !access("/tmp", F_OK)) {
 			tmp_path = "/tmp";
 		#endif
 		} else {
 			return Nan::ThrowError("Get temp path failed");
 		}
 
-		char *temp_file_path = str_concat_many(2, tmp_path, "/tmp-XXXXXX");
-		int fd = mkstemp(temp_file_path);
+	#ifdef _WIN32
+		const char *path_slash = "\\";
+	#else
+		const char *path_slash = "/";
+	#endif
+		char *temp_file_path = str_concat_many(3, tmp_path, path_slash, "tmp-XXXXXX");
+
+		int fd = -1;
+	#ifdef _WIN32
+		int err = _mktemp_s(temp_file_path, strlen(temp_file_path) + 1);
+		if(!err)
+		{
+			fd = open(temp_file_path, O_WRONLY | O_CREAT);
+		}
+	#else
+		fd = mkstemp(temp_file_path);
+	#endif
+
 		if(fd == -1)
 		{
 			return Nan::ThrowError("Create temp file failed");
@@ -1099,43 +1104,45 @@ void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_bridge_resolve_file_cancel(state);
 }
 
-void ResolveFileFinishedCallback(int status, const char *file_name, const char *temp_file_name, FILE *fd, uint64_t total_bytes, char *sha256, void *handle)
+void ResolveFileFinishedCallback(int status, const char *file_name, const char *temp_file_name, FILE *fd, uint64_t file_bytes, char *sha256, void *handle)
 {
 	Nan::HandleScope scope;
 
 	RemoveDownloadingTask(file_name);
 
-	if(!fd) {
+	if(fd) {
 		fclose(fd);
 	}
+
+	int rename_failed = 0;
 
 	// download success, remove the original file, and rename
 	// the downloaded file to the same file name.
 	if (status == 0)
 	{
-		const char *final_file_path = strdup(file_name);
+		const char *final_file_name = strdup(file_name);
 
 		bool getname_failed = true;
 
 		// original file exists
-		if (access(final_file_path, F_OK) != -1)
+		if (access(final_file_name, F_OK) != -1)
 		{
 			// delete it
-			int ret = unlink(final_file_path);
+			int ret = unlink(final_file_name);
 
 			// failed to delete
 			if (ret != 0)
 			{
 			#ifndef _WIN32
-				char *path_name = dirname((char *)final_file_path);
-				char *file_name = basename((char *)final_file_path);
+				char *path_name = dirname((char *)final_file_name);
+				char *file_name = basename((char *)final_file_name);
 			#else
 				char drive[_MAX_DRIVE];
 				char dir[_MAX_DIR];
 				char fname[_MAX_FNAME];
 				char ext[_MAX_EXT];
 
-				_splitpath(final_file_path, drive, dir, fname, ext);
+				_splitpath(final_file_name, drive, dir, fname, ext);
 				char *path_name = str_concat_many(2, drive, dir);
 				char *file_name = str_concat_many(2, fname, ext);
 			#endif
@@ -1152,12 +1159,12 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 						break;
 					}
 
-					free((void *)final_file_path);
-					final_file_path = str_concat_many(2, path_name, temp_file_name);
+					free((void *)final_file_name);
+					final_file_name = str_concat_many(2, path_name, temp_file_name);
 
 					free(temp_file_name);
 
-					if (access(final_file_path, F_OK) == -1)
+					if (access(final_file_name, F_OK) == -1)
 					{
 						getname_failed = false;
 						break;
@@ -1176,14 +1183,19 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 
 		if (!getname_failed)
 		{
-			rename(temp_file_name, final_file_path);
+			rename_failed = rename(temp_file_name, final_file_name);
+			if(rename_failed)
+			{
+				unlink(temp_file_name);
+			}
 		}
 		else
 		{
+			rename_failed = 1;
 			unlink(temp_file_name);
 		}
 
-		free((void *)final_file_path);
+		free((void *)final_file_name);
 	}
 	else
 	{
@@ -1197,22 +1209,33 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 	transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = download_callbacks->finished_callback;
 
-	Local<Value> total_bytes_local = Nan::Null();
+	Local<Value> file_bytes_local = Nan::Null();
 	Local<Value> sha256_local = Nan::Null();
 	if (status == 0)
 	{
-		total_bytes_local = Nan::New((double)total_bytes);
+		file_bytes_local = Nan::New((double)file_bytes);
 		sha256_local = Nan::New(sha256).ToLocalChecked();
 	}
 
-	Local<Value> error = IntToGenaroError(status);
+	Local<Value> error = Nan::Null();
+	if(rename_failed)
+	{
+		v8::Local<v8::String> msg = Nan::New("File rename error").ToLocalChecked();
+		error = Nan::Error(msg);
+	}
+	else
+	{
+		error = IntToGenaroError(status);
+	}
 
 	Local<Value> argv[] = {
 		error,
-		total_bytes_local,
+		file_bytes_local,
 		sha256_local };
 
 	Nan::Call(*callback, 3, argv);
+
+	free(sha256);
 }
 
 void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *handle)

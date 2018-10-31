@@ -43,12 +43,12 @@ const ctr = keyCtr.ctr;
 const rsaKey = xxxxxx; // encrypted key with rsa
 const rsaCtr = xxxxxx; // encrypted ctr with rsa
 
-const state = libgenaro.storeFile(bucketId, filePath, {
+const state = libgenaro.storeFile(bucketId, fileOrData, isFilePath, {
   filename: 'test-upload.data',
   progressCallback: function(progress, fileBytes) {
     console.log('progress:', progress);
   },
-  finishedCallback: function(err, fileId) {
+  finishedCallback: function(err, fileId, fileBytes, sha256_of_encrypted) {
     if (err) {
       return console.error(err);
     }
@@ -73,14 +73,15 @@ const downloadFilePath = './test-download.data';
 const key = xxxxxx; // the file encryption key
 const ctr = xxxxxx; // the file encryption ctr
 
-const state = libgenaro.resolveFile(bucketId, fileId, downloadFilePath, {
+const state = libgenaro.resolveFile(bucketId, fileId, filePath, {
   key: key,
   ctr: ctr,
-  overwrite: true,
+  overwrite: overwrite,
+  decrypt: decrypt,
   progressCallback: function(progress, fileBytes) {
-    console.log('progress:', progress)
+    console.log('progress:', progress);
   },
-  finishedCallback: function(err) {
+  finishedCallback: function(err, fileBytes, sha256) {
     if (err) {
       return console.error(err);
     }
