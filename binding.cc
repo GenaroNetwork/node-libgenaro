@@ -170,7 +170,7 @@ const char *ConvertToWindowsPath(const char *path)
 }
 #endif
 
-Local<Value> IntToGenaroError(int error_code)
+v8::Local<v8::Value> IntToGenaroError(int error_code)
 {
 	if (!error_code)
 	{
@@ -184,14 +184,14 @@ Local<Value> IntToGenaroError(int error_code)
 	return error;
 }
 
-Local<Value> IntToCurlError(int error_code)
+v8::Local<v8::Value> IntToCurlError(int error_code)
 {
 	const char *error_msg = curl_easy_strerror((CURLcode)error_code);
 	v8::Local<v8::String> msg = Nan::New(error_msg).ToLocalChecked();
 	return Nan::Error(msg);
 }
 
-Local<Value> IntToStatusError(int status_code)
+v8::Local<v8::Value> IntToStatusError(int status_code)
 {
 	Local<String> error_message;
 	switch (status_code)
@@ -226,12 +226,12 @@ Local<Value> IntToStatusError(int status_code)
 	default:
 		error_message = Nan::New("Unknown status error").ToLocalChecked();
 	}
-	Local<Value> error = Nan::Error(error_message);
+	v8::Local<v8::Value> error = Nan::Error(error_message);
 	return error;
 }
 
 template <typename ReqType>
-bool error_and_status_check(ReqType *req, Local<Value> *error)
+bool error_and_status_check(ReqType *req, v8::Local<v8::Value> *error)
 {
 	if (req->error_code)
 	{
@@ -268,7 +268,7 @@ void GetInfoCallback(uv_work_t *work_req, int status)
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
 
 	v8::Local<v8::Value> error = Nan::Null();
-	v8::Local<Value> result = Nan::Null();
+	v8::Local<v8::Value> result = Nan::Null();
 
 	if (error_and_status_check<json_request_t>(req, &error))
 	{
@@ -282,7 +282,7 @@ void GetInfoCallback(uv_work_t *work_req, int status)
 		}
 	}
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error,
 		result };
 
@@ -333,8 +333,8 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
 	get_buckets_request_t *req = (get_buckets_request_t *)work_req->data;
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
-	Local<Value> buckets_value = Nan::Null();
-	Local<Value> error = Nan::Null();
+	v8::Local<v8::Value> buckets_value = Nan::Null();
+	v8::Local<v8::Value> error = Nan::Null();
 
 	if (error_and_status_check<get_buckets_request_t>(req, &error))
 	{
@@ -346,6 +346,7 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
 			bucket->Set(Nan::New("created").ToLocalChecked(), StrToDate(req->buckets[i].created));
 			bucket->Set(Nan::New("id").ToLocalChecked(), Nan::New(req->buckets[i].id).ToLocalChecked());
 			bucket->Set(Nan::New("bucketId").ToLocalChecked(), Nan::New(req->buckets[i].bucketId).ToLocalChecked());
+			bucket->Set(Nan::New("type").ToLocalChecked(), Nan::New(req->buckets[i].type));
 			bucket->Set(Nan::New("decrypted").ToLocalChecked(), Nan::New<Boolean>(req->buckets[i].decrypted));
 			bucket->Set(Nan::New("limitStorage").ToLocalChecked(), Nan::New((double)req->buckets[i].limitStorage));
 			bucket->Set(Nan::New("usedStorage").ToLocalChecked(), Nan::New((double)req->buckets[i].usedStorage));
@@ -356,7 +357,7 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
 		buckets_value = buckets_array;
 	}
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error,
 		buckets_value };
 
@@ -395,8 +396,8 @@ void ListFilesCallback(uv_work_t *work_req, int status)
 	list_files_request_t *req = (list_files_request_t *)work_req->data;
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
-	Local<Value> files_value = Nan::Null();
-	Local<Value> error = Nan::Null();
+	v8::Local<v8::Value> files_value = Nan::Null();
+	v8::Local<v8::Value> error = Nan::Null();
 
 	if (error_and_status_check<list_files_request_t>(req, &error))
 	{
@@ -420,7 +421,7 @@ void ListFilesCallback(uv_work_t *work_req, int status)
 		files_value = files_array;
 	}
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error,
 		files_value };
 
@@ -464,8 +465,8 @@ void CreateBucketCallback(uv_work_t *work_req, int status)
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
 
-	Local<Value> bucket_value = Nan::Null();
-	Local<Value> error = Nan::Null();
+	v8::Local<v8::Value> bucket_value = Nan::Null();
+	v8::Local<v8::Value> error = Nan::Null();
 
 	if (error_and_status_check<create_bucket_request_t>(req, &error))
 	{
@@ -476,7 +477,7 @@ void CreateBucketCallback(uv_work_t *work_req, int status)
 		bucket_value = bucket_object;
 	}
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error,
 		bucket_value };
 
@@ -519,11 +520,11 @@ void DeleteBucketCallback(uv_work_t *work_req, int status)
 	json_request_t *req = (json_request_t *)work_req->data;
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
-	Local<Value> error = Nan::Null();
+	v8::Local<v8::Value> error = Nan::Null();
 
 	error_and_status_check<json_request_t>(req, &error);
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error };
 
 	Nan::Call(*callback, 1, argv);
@@ -566,11 +567,11 @@ void RenameBucketCallback(uv_work_t *work_req, int status)
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
 
-	Local<Value> error = Nan::Null();
+	v8::Local<v8::Value> error = Nan::Null();
 
 	error_and_status_check<rename_bucket_request_t>(req, &error);
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error };
 
 	Nan::Call(*callback, 1, argv);
@@ -716,9 +717,9 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 	transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = upload_callbacks->finished_callback;
 
-	Local<Value> file_id_local = Nan::Null();
-	Local<Value> file_bytes_local = Nan::Null();
-	Local<Value> sha256_of_encrypted_local = Nan::Null();
+	v8::Local<v8::Value> file_id_local = Nan::Null();
+	v8::Local<v8::Value> file_bytes_local = Nan::Null();
+	v8::Local<v8::Value> sha256_of_encrypted_local = Nan::Null();
 	if (status == 0)
 	{
 		file_id_local = Nan::New(file_id).ToLocalChecked();
@@ -726,9 +727,9 @@ void StoreFileFinishedCallback(const char *bucket_id, const char *file_name, int
 		sha256_of_encrypted_local = Nan::New(sha256_of_encrypted).ToLocalChecked();
 	}
 
-	Local<Value> error = IntToGenaroError(status);
+	v8::Local<v8::Value> error = IntToGenaroError(status);
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error,
 		file_id_local,
 		file_bytes_local,
@@ -750,7 +751,7 @@ void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handl
 	Local<Number> progress_local = Nan::New(progress);
 	Local<Number> file_bytes_local = Nan::New((double)file_bytes);
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		progress_local,
 		file_bytes_local };
 
@@ -762,7 +763,7 @@ void StateStatusErrorGetter(Local<String> property, const Nan::PropertyCallbackI
 {
 	Local<Object> self = info.Holder();
 	StateType *state = (StateType *)self->GetAlignedPointerFromInternalField(0);
-	Local<Value> error = IntToGenaroError(state->error_status);
+	v8::Local<v8::Value> error = IntToGenaroError(state->error_status);
 	info.GetReturnValue().Set(error);
 }
 
@@ -909,11 +910,13 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		v8::Local<v8::String> msg = Nan::New("File is already uploading").ToLocalChecked();
 		v8::Local<v8::Value> error = Nan::Error(msg);
 
-		Local<Value> argv[] = {
+		v8::Local<v8::Value> argv[] = {
 			error,
+			Nan::Null(),
+			Nan::Null(),
 			Nan::Null() };
 
-		Nan::Call(*(upload_callbacks->finished_callback), 2, argv);
+		Nan::Call(*(upload_callbacks->finished_callback), 4, argv);
 
 		return;
 	}
@@ -992,11 +995,13 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		v8::Local<v8::String> msg = Nan::New("Unable to open file").ToLocalChecked();
 		v8::Local<v8::Value> error = Nan::Error(msg);
 
-		Local<Value> argv[] = {
+		v8::Local<v8::Value> argv[] = {
 			error,
+			Nan::Null(),
+			Nan::Null(),
 			Nan::Null() };
 
-		Nan::Call(*(upload_callbacks->finished_callback), 2, argv);
+		Nan::Call(*(upload_callbacks->finished_callback), 4, argv);
 
 		return;
 	}
@@ -1215,15 +1220,15 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 	transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = download_callbacks->finished_callback;
 
-	Local<Value> file_bytes_local = Nan::Null();
-	Local<Value> sha256_local = Nan::Null();
+	v8::Local<v8::Value> file_bytes_local = Nan::Null();
+	v8::Local<v8::Value> sha256_local = Nan::Null();
 	if (status == 0)
 	{
 		file_bytes_local = Nan::New((double)file_bytes);
 		sha256_local = Nan::New(sha256).ToLocalChecked();
 	}
 
-	Local<Value> error = Nan::Null();
+	v8::Local<v8::Value> error = Nan::Null();
 	if(rename_failed)
 	{
 		v8::Local<v8::String> msg = Nan::New("File rename error").ToLocalChecked();
@@ -1234,7 +1239,7 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 		error = IntToGenaroError(status);
 	}
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error,
 		file_bytes_local,
 		sha256_local };
@@ -1254,7 +1259,7 @@ void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *han
 	Local<Number> progress_local = Nan::New(progress);
 	Local<Number> file_bytes_local = Nan::New((double)file_bytes);
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		progress_local,
 		file_bytes_local };
 
@@ -1343,10 +1348,13 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	{
 		v8::Local<v8::String> msg = Nan::New("File is already downloading").ToLocalChecked();
 		v8::Local<v8::Value> error = Nan::Error(msg);
-		Local<Value> argv[] = {
-			error };
 
-		Nan::Call(*(download_callbacks->finished_callback), 1, argv);
+		v8::Local<v8::Value> argv[] = {
+			error,
+			Nan::Null(),
+			Nan::Null() };
+
+		Nan::Call(*(download_callbacks->finished_callback), 3, argv);
 
 		return;
 	}
@@ -1375,10 +1383,13 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		{
 			v8::Local<v8::String> msg = Nan::New("File already exists").ToLocalChecked();
 			v8::Local<v8::Value> error = Nan::Error(msg);
-			Local<Value> argv[] = {
-				error };
 
-			Nan::Call(*(download_callbacks->finished_callback), 1, argv);
+			v8::Local<v8::Value> argv[] = {
+				error,
+				Nan::Null(),
+				Nan::Null() };
+
+			Nan::Call(*(download_callbacks->finished_callback), 3, argv);
 
 			return;
 		}
@@ -1392,10 +1403,13 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 	{
 		v8::Local<v8::String> msg = Nan::New(strerror(errno)).ToLocalChecked();
 		v8::Local<v8::Value> error = Nan::Error(msg);
-		Local<Value> argv[] = {
-			error };
 
-		Nan::Call(*(download_callbacks->finished_callback), 1, argv);
+		v8::Local<v8::Value> argv[] = {
+			error,
+			Nan::Null(),
+			Nan::Null() };
+
+		Nan::Call(*(download_callbacks->finished_callback), 3, argv);
 
 		return;
 	}
@@ -1499,11 +1513,11 @@ void DeleteFileCallback(uv_work_t *work_req, int status)
 	json_request_t *req = (json_request_t *)work_req->data;
 
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
-	Local<Value> error = Nan::Null();
+	v8::Local<v8::Value> error = Nan::Null();
 
 	error_and_status_check<json_request_t>(req, &error);
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error };
 
 	Nan::Call(*callback, 1, argv);
@@ -1718,7 +1732,7 @@ void RegisterCallback(uv_work_t *work_req, int status)
 	Nan::Callback *callback = (Nan::Callback *)req->handle;
 
 	v8::Local<v8::Value> error = Nan::Null();
-	v8::Local<Value> result = Nan::Null();
+	v8::Local<v8::Value> result = Nan::Null();
 
 	if (error_and_status_check<json_request_t>(req, &error))
 	{
@@ -1732,7 +1746,7 @@ void RegisterCallback(uv_work_t *work_req, int status)
 		}
 	}
 
-	Local<Value> argv[] = {
+	v8::Local<v8::Value> argv[] = {
 		error,
 		result };
 
