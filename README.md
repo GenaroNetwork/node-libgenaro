@@ -7,7 +7,8 @@ Node.js library for encrypted file transfer on the GenaroNetwork network via bin
 ## Example Usage
 
 Install via npm:
-```
+
+```bash
 npm install libgenaro
 ```
 
@@ -31,6 +32,7 @@ const libgenaro = new Environment({
 ```
 
 Upload a file to a bucket:
+
 ```js
 const bucketId = '368be0816766b28fd5f43af5';
 const filePath = './test-upload.data';
@@ -100,28 +102,32 @@ Please see [`./examples`](/examples) directory for further usage.
 
 ## API
 
-- `.Environment(options)` - A constructor for keeping encryption options and other environment settings, see available methods below
-- `.mnemonicGenerate(bits)` - Will create a new *Encryption Key* string for file encryption/decryption
-- `.mnemonicCheck(encryptionKey)` - Will return boolean to verify that an *Encryption Key* hasn't been typed incorrectly by verifying the checksum and format
-- `.utilTimestamp()` - Returns current unix timestamp in milliseconds
+- `Environment(options)` - A constructor for keeping encryption options and other environment settings, see available methods below
+- `mnemonicGenerate(bits)` - Will create a new *Encryption Key* string for file encryption/decryption
+- `mnemonicCheck(encryptionKey)` - Will return boolean to verify that an *Encryption Key* hasn't been typed incorrectly by verifying the checksum and format
+- `utilTimestamp()` - Returns current unix timestamp in milliseconds
 
 Methods available on an instance of `Environment`:
 
-- `.getInfo(function(err, result) {})` - Get general API info`
-- `.getBuckets(function(err, result) {})` - Get list of available buckets
-- `.createBucket(bucketName, function(err, result) {})` - Create a bucket
-- `.deleteBucket(bucketId, function(err, result) {})` - Delete a bucket
-- `.renameBucket(bucketId, function(err) {})` - Rename a bucket
-- `.listFiles(bucketId, function(err, result) {})` - List files in a bucket
-- `.storeFile(bucketId, filePath, options)` - Upload a file, return state object
-- `.storeFileCancel(state)` - Cancel an upload
-- `.resolveFile(bucketId, fileId, decryption_key, decryption_ctr, filePath, options)` - Download a file, return state object
-- `.resolveFileCancel(state)` - Cancel a download
-- `.deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
-- `.decryptName(encryptedName)` - Decrypt a name that is encrypted, return undefined if fail
-- `.generateEncryptionInfo(bucketId)` - Generate the key and ctr of AES-256-CTR for file encryption, and also the index related to the key and ctr,, return undefined if fail
-- `.destroy()` - Zero and free memory of encryption keys and the environment
-
+- `getInfo(function(err, result) {})` - Get general API info`
+- `getBuckets(function(err, result) {})` - Get list of available buckets
+- `createBucket(bucketName, function(err, result) {})` - Create a bucket
+- `deleteBucket(bucketId, function(err, result) {})` - Delete a bucket
+- `renameBucket(bucketId, function(err) {})` - Rename a bucket
+- `listFiles(bucketId, function(err, result) {})` - List files in a bucket
+- `storeFile(bucketId, filePath, options)` - Upload a file, return state object
+- `storeFileCancel(state)` - Cancel an upload
+- `resolveFile(bucketId, fileId, decryption_key, decryption_ctr, filePath, options)` - Download a file, return state object
+- `resolveFileCancel(state)` - Cancel a download
+- `deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
+- `decryptName(encryptedName)` - Decrypt a name that is encrypted, return undefined if fail
+- `generateEncryptionInfo(bucketId)` - Generate the key and ctr of AES-256-CTR for file encryption, and also the index related to the key and ctr,, return undefined if fail
+- `decryptFile(filePath, key, ctr)` - Decrypt the undecrypted file use the key and ctr of AES-256-CTR
+- `encryptMeta(meta)` - Encrypt the meta use AES-256-GCM combined with HMAC-SHA512
+- `encryptMetaToFile(meta, filePath)` - Encrypt the meta use AES-256-GCM combined with HMAC-SHA512 to filePath
+- `decryptMeta(encryptedMeta)` - Decrypt the encryptedMeta
+- `decryptMetaFromFile(filePath)` - Decrypt the data in filePath
+- `destroy()` - Zero and free memory of encryption keys and the environment
 
 ## License
 
