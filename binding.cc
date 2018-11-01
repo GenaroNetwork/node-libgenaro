@@ -13,9 +13,6 @@
 
 #include "genaro.h"
 
-using namespace v8;
-using namespace Nan;
-
 class free_env_proxy
 {
 public:
@@ -193,7 +190,7 @@ v8::Local<v8::Value> IntToCurlError(int error_code)
 
 v8::Local<v8::Value> IntToStatusError(int status_code)
 {
-	Local<String> error_message;
+	v8::Local<v8::String> error_message;
 	switch (status_code)
 	{
 	case 400:
@@ -249,12 +246,12 @@ bool error_and_status_check(ReqType *req, v8::Local<v8::Value> *error)
 	return false;
 }
 
-void Timestamp(const v8::FunctionCallbackInfo<Value> &args)
+void Timestamp(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
-	Isolate *isolate = args.GetIsolate();
+	v8::Isolate *isolate = args.GetIsolate();
 
 	uint64_t timestamp = genaro_util_timestamp();
-	Local<Number> timestamp_local = Number::New(isolate, (double)timestamp);
+	v8::Local<v8::Number> timestamp_local = v8::Number::New(isolate, (double)timestamp);
 
 	args.GetReturnValue().Set(timestamp_local);
 }
@@ -292,7 +289,7 @@ void GetInfoCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void GetInfo(const Nan::FunctionCallbackInfo<Value> &args)
+void GetInfo(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1 || !args[0]->IsFunction())
 	{
@@ -309,14 +306,14 @@ void GetInfo(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	Nan::Callback *callback = new Nan::Callback(args[0].As<Function>());
+	Nan::Callback *callback = new Nan::Callback(args[0].As<v8::Function>());
 
 	genaro_bridge_get_info(env, (void *)callback, GetInfoCallback);
 }
 
-Local<Date> StrToDate(const char *dateStr)
+v8::Local<v8::Date> StrToDate(const char *dateStr)
 {
-	Local<Date> tmp = Nan::New<Date>(0).ToLocalChecked();
+	v8::Local<v8::Date> tmp = Nan::New<v8::Date>(0).ToLocalChecked();
 	v8::Local<v8::Function> cons = v8::Local<v8::Function>::Cast(
 		Nan::Get(tmp, Nan::New("constructor").ToLocalChecked()).ToLocalChecked());
 	const int argc = 1;
@@ -338,16 +335,16 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
 
 	if (error_and_status_check<get_buckets_request_t>(req, &error))
 	{
-		Local<Array> buckets_array = Nan::New<Array>();
+		v8::Local<v8::Array> buckets_array = Nan::New<v8::Array>();
 		for (uint32_t i = 0; i < req->total_buckets; i++)
 		{
-			Local<Object> bucket = Nan::New<Object>();
+			v8::Local<v8::Object> bucket = Nan::New<v8::Object>();
 			bucket->Set(Nan::New("name").ToLocalChecked(), Nan::New(req->buckets[i].name).ToLocalChecked());
 			bucket->Set(Nan::New("created").ToLocalChecked(), StrToDate(req->buckets[i].created));
 			bucket->Set(Nan::New("id").ToLocalChecked(), Nan::New(req->buckets[i].id).ToLocalChecked());
 			bucket->Set(Nan::New("bucketId").ToLocalChecked(), Nan::New(req->buckets[i].bucketId).ToLocalChecked());
 			bucket->Set(Nan::New("type").ToLocalChecked(), Nan::New(req->buckets[i].type));
-			bucket->Set(Nan::New("decrypted").ToLocalChecked(), Nan::New<Boolean>(req->buckets[i].decrypted));
+			bucket->Set(Nan::New("decrypted").ToLocalChecked(), Nan::New<v8::Boolean>(req->buckets[i].decrypted));
 			bucket->Set(Nan::New("limitStorage").ToLocalChecked(), Nan::New((double)req->buckets[i].limitStorage));
 			bucket->Set(Nan::New("usedStorage").ToLocalChecked(), Nan::New((double)req->buckets[i].usedStorage));
 			bucket->Set(Nan::New("timeStart").ToLocalChecked(), Nan::New((double)req->buckets[i].timeStart));
@@ -367,7 +364,7 @@ void GetBucketsCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void GetBuckets(const Nan::FunctionCallbackInfo<Value> &args)
+void GetBuckets(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1 || !args[0]->IsFunction())
 	{
@@ -384,7 +381,7 @@ void GetBuckets(const Nan::FunctionCallbackInfo<Value> &args)
 		return Nan::ThrowError("Environment is not initialized");
 	}
 
-	Nan::Callback *callback = new Nan::Callback(args[0].As<Function>());
+	Nan::Callback *callback = new Nan::Callback(args[0].As<v8::Function>());
 
 	genaro_bridge_get_buckets(env, (void *)callback, GetBucketsCallback);
 }
@@ -401,10 +398,10 @@ void ListFilesCallback(uv_work_t *work_req, int status)
 
 	if (error_and_status_check<list_files_request_t>(req, &error))
 	{
-		Local<Array> files_array = Nan::New<Array>();
+		v8::Local<v8::Array> files_array = Nan::New<v8::Array>();
 		for (uint32_t i = 0; i < req->total_files; i++)
 		{
-			Local<Object> file = Nan::New<Object>();
+			v8::Local<v8::Object> file = Nan::New<v8::Object>();
 			file->Set(Nan::New("filename").ToLocalChecked(), Nan::New(req->files[i].filename).ToLocalChecked());
 			file->Set(Nan::New("mimetype").ToLocalChecked(), Nan::New(req->files[i].mimetype).ToLocalChecked());
 			file->Set(Nan::New("id").ToLocalChecked(), Nan::New(req->files[i].id).ToLocalChecked());
@@ -431,7 +428,7 @@ void ListFilesCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void ListFiles(const Nan::FunctionCallbackInfo<Value> &args)
+void ListFiles(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 2 || !args[1]->IsFunction())
 	{
@@ -452,7 +449,7 @@ void ListFiles(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *bucket_id = *str;
 	const char *bucket_id_dup = strdup(bucket_id);
 
-	Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
+	Nan::Callback *callback = new Nan::Callback(args[1].As<v8::Function>());
 
 	genaro_bridge_list_files(env, bucket_id_dup, (void *)callback, ListFilesCallback);
 }
@@ -470,10 +467,10 @@ void CreateBucketCallback(uv_work_t *work_req, int status)
 
 	if (error_and_status_check<create_bucket_request_t>(req, &error))
 	{
-		Local<Object> bucket_object = Nan::To<Object>(Nan::New<Object>()).ToLocalChecked();
+		v8::Local<v8::Object> bucket_object = Nan::To<v8::Object>(Nan::New<v8::Object>()).ToLocalChecked();
 		bucket_object->Set(Nan::New("name").ToLocalChecked(), Nan::New(req->bucket->name).ToLocalChecked());
 		bucket_object->Set(Nan::New("id").ToLocalChecked(), Nan::New(req->bucket->id).ToLocalChecked());
-		bucket_object->Set(Nan::New("decrypted").ToLocalChecked(), Nan::New<Boolean>(req->bucket->decrypted));
+		bucket_object->Set(Nan::New("decrypted").ToLocalChecked(), Nan::New<v8::Boolean>(req->bucket->decrypted));
 		bucket_value = bucket_object;
 	}
 
@@ -487,7 +484,7 @@ void CreateBucketCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void CreateBucket(const Nan::FunctionCallbackInfo<Value> &args)
+void CreateBucket(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 2 || !args[1]->IsFunction())
 	{
@@ -508,7 +505,7 @@ void CreateBucket(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *name = *str;
 	const char *name_dup = strdup(name);
 
-	Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
+	Nan::Callback *callback = new Nan::Callback(args[1].As<v8::Function>());
 
 	genaro_bridge_create_bucket(env, name_dup, (void *)callback, CreateBucketCallback);
 }
@@ -533,7 +530,7 @@ void DeleteBucketCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void DeleteBucket(const Nan::FunctionCallbackInfo<Value> &args)
+void DeleteBucket(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 2 || !args[1]->IsFunction())
 	{
@@ -554,7 +551,7 @@ void DeleteBucket(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *id = *str;
 	const char *id_dup = strdup(id);
 
-	Nan::Callback *callback = new Nan::Callback(args[1].As<Function>());
+	Nan::Callback *callback = new Nan::Callback(args[1].As<v8::Function>());
 
 	genaro_bridge_delete_bucket(env, id_dup, (void *)callback, DeleteBucketCallback);
 }
@@ -580,7 +577,7 @@ void RenameBucketCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void RenameBucket(const Nan::FunctionCallbackInfo<Value> &args)
+void RenameBucket(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 3 || !args[2]->IsFunction())
 	{
@@ -605,7 +602,7 @@ void RenameBucket(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *name = *name_str;
 	const char *name_dup = strdup(name);
 
-	Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
+	Nan::Callback *callback = new Nan::Callback(args[2].As<v8::Function>());
 
 	genaro_bridge_rename_bucket(env, id_dup, name_dup, (void *)callback, RenameBucketCallback);
 }
@@ -748,8 +745,8 @@ void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handl
 	transfer_callbacks_t *upload_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = upload_callbacks->progress_callback;
 
-	Local<Number> progress_local = Nan::New(progress);
-	Local<Number> file_bytes_local = Nan::New((double)file_bytes);
+	v8::Local<v8::Number> progress_local = Nan::New(progress);
+	v8::Local<v8::Number> file_bytes_local = Nan::New((double)file_bytes);
 
 	v8::Local<v8::Value> argv[] = {
 		progress_local,
@@ -759,9 +756,9 @@ void StoreFileProgressCallback(double progress, uint64_t file_bytes, void *handl
 }
 
 template <class StateType>
-void StateStatusErrorGetter(Local<String> property, const Nan::PropertyCallbackInfo<Value> &info)
+void StateStatusErrorGetter(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info)
 {
-	Local<Object> self = info.Holder();
+	v8::Local<v8::Object> self = info.Holder();
 	StateType *state = (StateType *)self->GetAlignedPointerFromInternalField(0);
 	v8::Local<v8::Value> error = IntToGenaroError(state->error_status);
 	info.GetReturnValue().Set(error);
@@ -791,7 +788,7 @@ std::unique_ptr<char[]> EncodingConvert(const char* strIn, int sourceCodepage, i
 }
 #endif
 
-void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
+void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1)
 	{
@@ -815,7 +812,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 
 	if (encryption_info)
 	{
-		Local<Object> encryption = Nan::New<Object>();
+		v8::Local<v8::Object> encryption = Nan::New<v8::Object>();
 		encryption->Set(Nan::New("index").ToLocalChecked(), Nan::New(encryption_info->index).ToLocalChecked());
 		free(encryption_info->index);
 		encryption->Set(Nan::New("key").ToLocalChecked(), Nan::New(encryption_info->key_ctr_as_str->key_as_str).ToLocalChecked());
@@ -829,7 +826,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 }
 
-// void EncryptData(const Nan::FunctionCallbackInfo<Value> &args)
+// void EncryptData(const Nan::FunctionCallbackInfo<v8::Value> &args)
 // {
 // 	if (args.Length() != 1)
 // 	{
@@ -853,7 +850,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 
 // 	if (encryption_info)
 // 	{
-// 		Local<Object> encryption = Nan::New<Object>();
+// 		v8::Local<v8::Object> encryption = Nan::New<v8::Object>();
 // 		encryption->Set(Nan::New("index").ToLocalChecked(), Nan::New(encryption_info->index).ToLocalChecked());
 // 		free(encryption_info->index);
 // 		encryption->Set(Nan::New("key").ToLocalChecked(), Nan::New(encryption_info->key_ctr_as_str->key_as_str).ToLocalChecked());
@@ -867,7 +864,7 @@ void GenerateEncryptionInfo(const Nan::FunctionCallbackInfo<Value> &args)
 // 	}
 // }
 
-void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
+void StoreFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 4)
 	{
@@ -898,8 +895,8 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	transfer_callbacks_t *upload_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
-	upload_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<Function>());
-	upload_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<Function>());
+	upload_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<v8::Function>());
+	upload_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<v8::Function>());
 
 	Nan::Utf8String file_name_str(options->Get(Nan::New("filename").ToLocalChecked()).As<v8::String>());
 	const char *file_name = *file_name_str;
@@ -1069,11 +1066,11 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	uploading_task_list.push_back(task);
 
-	Isolate *isolate = args.GetIsolate();
-	Local<ObjectTemplate> state_template = ObjectTemplate::New(isolate);
+	v8::Isolate *isolate = args.GetIsolate();
+	v8::Local<v8::ObjectTemplate> state_template = v8::ObjectTemplate::New(isolate);
 	state_template->SetInternalFieldCount(1);
 
-	Local<Object> state_local = state_template->NewInstance();
+	v8::Local<v8::Object> state_local = state_template->NewInstance();
 	state_local->SetAlignedPointerInInternalField(0, state);
 	Nan::SetAccessor(state_local, Nan::New("error_status").ToLocalChecked(),
 		StateStatusErrorGetter<genaro_upload_state_t>);
@@ -1081,14 +1078,14 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 	args.GetReturnValue().Set(state_local);
 }
 
-void StoreFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
+void StoreFileCancel(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
 
-	Local<Object> state_local = args[0].As<Object>();
+	v8::Local<v8::Object> state_local = args[0].As<v8::Object>();
 	if (state_local->IsNullOrUndefined())
 	{
 		return Nan::ThrowError("Unexpected arguments");
@@ -1098,14 +1095,14 @@ void StoreFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
 	genaro_bridge_store_file_cancel(state);
 }
 
-void ResolveFileCancel(const Nan::FunctionCallbackInfo<Value> &args)
+void ResolveFileCancel(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1)
 	{
 		return Nan::ThrowError("Unexpected arguments");
 	}
 
-	Local<Object> state_local = args[0].As<Object>();
+	v8::Local<v8::Object> state_local = args[0].As<v8::Object>();
 	if (state_local->IsNullOrUndefined())
 	{
 		return Nan::ThrowError("Unexpected arguments");
@@ -1256,8 +1253,8 @@ void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *han
 	transfer_callbacks_t *download_callbacks = (transfer_callbacks_t *)handle;
 	Nan::Callback *callback = download_callbacks->progress_callback;
 
-	Local<Number> progress_local = Nan::New(progress);
-	Local<Number> file_bytes_local = Nan::New((double)file_bytes);
+	v8::Local<v8::Number> progress_local = Nan::New(progress);
+	v8::Local<v8::Number> file_bytes_local = Nan::New((double)file_bytes);
 
 	v8::Local<v8::Value> argv[] = {
 		progress_local,
@@ -1266,7 +1263,7 @@ void ResolveFileProgressCallback(double progress, uint64_t file_bytes, void *han
 	Nan::Call(*callback, 2, argv);
 }
 
-void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
+void ResolveFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 4)
 	{
@@ -1341,8 +1338,8 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	transfer_callbacks_t *download_callbacks = static_cast<transfer_callbacks_t *>(malloc(sizeof(transfer_callbacks_t)));
 
-	download_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<Function>());
-	download_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<Function>());
+	download_callbacks->progress_callback = new Nan::Callback(options->Get(Nan::New("progressCallback").ToLocalChecked()).As<v8::Function>());
+	download_callbacks->finished_callback = new Nan::Callback(options->Get(Nan::New("finishedCallback").ToLocalChecked()).As<v8::Function>());
 
 	if (IsDownloading(file_path_dup))
 	{
@@ -1359,20 +1356,20 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 		return;
 	}
 
-	Nan::MaybeLocal<Value> overwriteOption = options->Get(Nan::New("overwrite").ToLocalChecked());
+	Nan::MaybeLocal<v8::Value> overwriteOption = options->Get(Nan::New("overwrite").ToLocalChecked());
 
 	bool overwrite = false;
 	if (!overwriteOption.IsEmpty())
 	{
-		overwrite = To<bool>(overwriteOption.ToLocalChecked()).FromJust();
+		overwrite = Nan::To<bool>(overwriteOption.ToLocalChecked()).FromJust();
 	}
 
-	Nan::MaybeLocal<Value> decryptOption = options->Get(Nan::New("decrypt").ToLocalChecked());
+	Nan::MaybeLocal<v8::Value> decryptOption = options->Get(Nan::New("decrypt").ToLocalChecked());
 
 	bool decrypt = true;
 	if (!decryptOption.IsEmpty())
 	{
-		decrypt = To<bool>(decryptOption.ToLocalChecked()).FromJust();
+		decrypt = Nan::To<bool>(decryptOption.ToLocalChecked()).FromJust();
 	}
 
 	FILE *fd = NULL;
@@ -1444,11 +1441,11 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 
 	downloading_task_list.push_back(task);
 
-	Isolate *isolate = args.GetIsolate();
-	Local<ObjectTemplate> state_template = ObjectTemplate::New(isolate);
+	v8::Isolate *isolate = args.GetIsolate();
+	v8::Local<v8::ObjectTemplate> state_template = v8::ObjectTemplate::New(isolate);
 	state_template->SetInternalFieldCount(1);
 
-	Local<Object> state_local = state_template->NewInstance();
+	v8::Local<v8::Object> state_local = state_template->NewInstance();
 	state_local->SetAlignedPointerInInternalField(0, state);
 	Nan::SetAccessor(state_local, Nan::New("error_status").ToLocalChecked(),
 		StateStatusErrorGetter<genaro_download_state_t>);
@@ -1457,7 +1454,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<Value> &args)
 }
 
 // decrypt the downloaded but not decrypted file
-void DecryptFile(const Nan::FunctionCallbackInfo<Value> &args)
+void DecryptFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 3)
 	{
@@ -1526,7 +1523,7 @@ void DeleteFileCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
+void DeleteFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 3 || !args[2]->IsFunction())
 	{
@@ -1551,12 +1548,12 @@ void DeleteFile(const Nan::FunctionCallbackInfo<Value> &args)
 	const char *file_id = *file_id_str;
 	const char *file_id_dup = strdup(file_id);
 
-	Nan::Callback *callback = new Nan::Callback(args[2].As<Function>());
+	Nan::Callback *callback = new Nan::Callback(args[2].As<v8::Function>());
 
 	genaro_bridge_delete_file(env, bucket_id_dup, file_id_dup, (void *)callback, DeleteFileCallback);
 }
 
-void EncryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
+void EncryptMeta(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1)
 	{
@@ -1585,7 +1582,7 @@ void EncryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 }
 
-void EncryptMetaToFile(const Nan::FunctionCallbackInfo<Value> &args)
+void EncryptMetaToFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 2)
 	{
@@ -1629,7 +1626,7 @@ void EncryptMetaToFile(const Nan::FunctionCallbackInfo<Value> &args)
 	args.GetReturnValue().Set(Nan::New(ret));
 }
 
-void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
+void DecryptMeta(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1)
 	{
@@ -1658,7 +1655,7 @@ void DecryptMeta(const Nan::FunctionCallbackInfo<Value> &args)
 	}
 }
 
-void DecryptMetaFromFile(const Nan::FunctionCallbackInfo<Value> &args)
+void DecryptMetaFromFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.Length() != 1)
 	{
@@ -1756,7 +1753,7 @@ void RegisterCallback(uv_work_t *work_req, int status)
 	free(work_req);
 }
 
-void DestroyEnvironment(const Nan::FunctionCallbackInfo<Value> &args)
+void DestroyEnvironment(const Nan::FunctionCallbackInfo<v8::Value> &args)
 {
 	if (args.This()->InternalFieldCount() != 1)
 	{
@@ -1779,7 +1776,7 @@ void DestroyEnvironment(const Nan::FunctionCallbackInfo<Value> &args)
 void FreeEnvironmentCallback(const Nan::WeakCallbackInfo<free_env_proxy> &data)
 {
 	free_env_proxy *proxy = data.GetParameter();
-	Local<Object> obj = Nan::New<Object>(proxy->persistent);
+	v8::Local<v8::Object> obj = Nan::New<v8::Object>(proxy->persistent);
 	genaro_env_t *env = (genaro_env_t *)obj->GetAlignedPointerFromInternalField(0);
 
 	if (env && genaro_destroy_env(env))
@@ -1789,7 +1786,7 @@ void FreeEnvironmentCallback(const Nan::WeakCallbackInfo<free_env_proxy> &data)
 	delete proxy;
 }
 
-void Environment(const v8::FunctionCallbackInfo<Value> &args)
+void Environment(const v8::FunctionCallbackInfo<v8::Value> &args)
 {
 	Nan::EscapableHandleScope scope;
 	if (args.Length() == 0)
@@ -1802,8 +1799,8 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	v8::Local<v8::String> bridgeUrl = options->Get(Nan::New("bridgeUrl").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> key_file = options->Get(Nan::New("keyFile").ToLocalChecked()).As<v8::String>();
 	v8::Local<v8::String> passphrase = options->Get(Nan::New("passphrase").ToLocalChecked()).As<v8::String>();
-	Nan::MaybeLocal<Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
-	Nan::MaybeLocal<Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
+	Nan::MaybeLocal<v8::Value> user_agent = options->Get(Nan::New("userAgent").ToLocalChecked());
+	Nan::MaybeLocal<v8::Value> logLevel = options->Get(Nan::New("logLevel").ToLocalChecked());
 
 	v8::Local<v8::FunctionTemplate> constructor = Nan::New<v8::FunctionTemplate>();
 	constructor->SetClassName(Nan::New("Environment").ToLocalChecked());
@@ -1905,7 +1902,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	log_options.level = 0;
 	if (!logLevel.ToLocalChecked()->IsNullOrUndefined())
 	{
-		log_options.level = To<int>(logLevel.ToLocalChecked()).FromJust();
+		log_options.level = Nan::To<int>(logLevel.ToLocalChecked()).FromJust();
 	}
 
 	// Initialize environment
@@ -1943,7 +1940,7 @@ void Environment(const v8::FunctionCallbackInfo<Value> &args)
 	args.GetReturnValue().Set(persistent);
 }
 
-void init(Handle<Object> exports)
+void init(v8::Handle<v8::Object> exports)
 {
 	NODE_SET_METHOD(exports, "Environment", Environment);
 	NODE_SET_METHOD(exports, "utilTimestamp", Timestamp);
