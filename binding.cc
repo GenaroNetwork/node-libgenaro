@@ -964,7 +964,13 @@ void StoreFile(const Nan::FunctionCallbackInfo<Value> &args)
 		}
 
 		size_t len = strlen(file_or_data);
-		if(write(fd, file_or_data, len) != len)
+		if(write(fd, file_or_data, len) != 
+		#ifdef _WIN32
+			(int)len
+		#else
+			(ssize_t)len
+		#endif
+		)
 		{
 			close(fd);
 			return Nan::ThrowError("Write data to file failed");
