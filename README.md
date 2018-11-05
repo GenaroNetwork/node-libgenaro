@@ -120,12 +120,11 @@ Methods available on an instance of `Environment`:
 - `resolveFile(bucketId, fileId, decryption_key, decryption_ctr, filePath, options)` - Download a file, return state object
 - `resolveFileCancel(state)` - Cancel a download
 - `deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
-- `decryptName(encryptedName)` - Decrypt a name that is encrypted, return undefined if fail
 - `generateEncryptionInfo(bucketId)` - Generate the key and ctr of AES-256-CTR for file encryption, and also the index related to the key and ctr,, return undefined if fail
 - `decryptFile(filePath, key, ctr)` - Decrypt the undecrypted file use the key and ctr of AES-256-CTR
-- `encryptMeta(meta)` - Encrypt the meta use AES-256-GCM combined with HMAC-SHA512
+- `encryptMeta(meta)` - Encrypt the meta use AES-256-GCM combined with HMAC-SHA512, return the encrypted meta if success, undefined if fail
 - `encryptMetaToFile(meta, filePath)` - Encrypt the meta use AES-256-GCM combined with HMAC-SHA512 to filePath
-- `decryptMeta(encryptedMeta)` - Decrypt the encryptedMeta
+- `decryptMeta(encryptedMeta)` - Decrypt the encryptedMeta, return the decrypted meta if success, undefined if fail
 - `decryptMetaFromFile(filePath)` - Decrypt the data in filePath
 - `destroy()` - Zero and free memory of encryption keys and the environment
 
