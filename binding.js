@@ -72,7 +72,7 @@ switch(cmd) {
     break;
   case 'ldflags':
     status = 0;
-    const ldflags = archives.map((a) => '-Wl,--whole-archive ' + a).join(' ');
+    const ldflags = archives.map((a) => '-Wl,--whole-archive ' + a).join(' ') + ' -lidn2';
     stdout.write(installed ? '' : ldflags + ' -Wl,--no-whole-archive');
     break;
   case 'ldflags_mac':
