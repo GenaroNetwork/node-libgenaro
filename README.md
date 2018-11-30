@@ -10,8 +10,6 @@ Install via npm:
 npm install libgenaro
 ```
 
-Please see [`./examples`](/examples) directory for example code usage.
-
 First setup the storj environment with authentication and encryption options:
 
 ```js
@@ -99,8 +97,6 @@ Once finished, you should call to zero and free memory holding encryption keys:
 ```js
 libgenaro.destroy();
 ```
-
-Please see [`./examples`](/examples) directory for further usage.
 
 ## API
 
