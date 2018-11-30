@@ -20,15 +20,19 @@ First setup the storj environment with authentication and encryption options:
 const { Environment } = require('libgenaro');
 
 const libgenaro = new Environment({
-  bridgeUrl: 'http://101.132.159.197:8080',
-  bridgeUser: 'user@domain.com',
-  bridgePass: 'password',
-  bridgeApiKey: 'xx0000000000000000000000000000000000000000',
-  bridgeSecretKey: 'xx0000000000000000000000000000000000000000',
-  encryptionKey: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-  logLevel: 4
+    bridgeUrl: 'http://111.111.111.111:8080',
+    keyFile: `{
+        "address": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "crypto":{"ciphertext":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "cipherparams":{"iv":"cccccccccccccccccccccccccccccccc"},"cipher":"aes-128-ctr",
+        "kdf":"scrypt","kdfparams":{"dklen":32,"salt":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","n":262144,"r":8,
+        "p":1},"mac":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},
+        "id": "ffffffff-1111-2222-3333-444444444444",
+        "version": 3
+    }
+    `,
+    passphrase: '123456',
 });
-// pick one of [bridgeUser + bridgePass] and [bridgeApiKey + bridgeSecretKey]
 ```
 
 Upload a file to a bucket:
@@ -48,7 +52,7 @@ const rsaCtr = xxxxxx; // encrypted ctr with rsa
 const state = libgenaro.storeFile(bucketId, fileOrData, isFilePath, {
   filename: 'test-upload.data',
   progressCallback: function(progress, fileBytes) {
-    console.log('progress:', progress);
+    console.log('Progress:', progress);
   },
   finishedCallback: function(err, fileId, fileBytes, sha256_of_encrypted) {
     if (err) {
@@ -103,21 +107,17 @@ Please see [`./examples`](/examples) directory for further usage.
 ## API
 
 - `Environment(options)` - A constructor for keeping encryption options and other environment settings, see available methods below
-- `mnemonicGenerate(bits)` - Will create a new *Encryption Key* string for file encryption/decryption
-- `mnemonicCheck(encryptionKey)` - Will return boolean to verify that an *Encryption Key* hasn't been typed incorrectly by verifying the checksum and format
-- `utilTimestamp()` - Returns current unix timestamp in milliseconds
 
 Methods available on an instance of `Environment`:
 
 - `getInfo(function(err, result) {})` - Get general API info`
 - `getBuckets(function(err, result) {})` - Get list of available buckets
-- `createBucket(bucketName, function(err, result) {})` - Create a bucket
 - `deleteBucket(bucketId, function(err, result) {})` - Delete a bucket
 - `renameBucket(bucketId, function(err) {})` - Rename a bucket
 - `listFiles(bucketId, function(err, result) {})` - List files in a bucket
-- `storeFile(bucketId, filePath, options)` - Upload a file, return state object
+- `storeFile(bucketId, fileOrData, isFilePath, options)` - Upload a file, return state object
 - `storeFileCancel(state)` - Cancel an upload
-- `resolveFile(bucketId, fileId, decryption_key, decryption_ctr, filePath, options)` - Download a file, return state object
+- `resolveFile(bucketId, fileId, filePath, options)` - Download a file, return state object
 - `resolveFileCancel(state)` - Cancel a download
 - `deleteFile(bucketId, fileId, function(err, result) {})` - Delete a file from a bucket
 - `generateEncryptionInfo(bucketId)` - Generate the key and ctr of AES-256-CTR for file encryption, and also the index related to the key and ctr,, return undefined if fail
