@@ -1,7 +1,5 @@
 # node-libgenaro
 
-[![Build Status](https://travis-ci.org/GenaroNetwork/node-libgenaro.svg?branch=master)](https://travis-ci.org/GenaroNetwork/node-libgenaro)
-
 Node.js library for encrypted file transfer on the GenaroNetwork network via bindings to [libgenaro](https://github.com/GenaroNetwork/libgenaro).
 
 ## Example Usage
