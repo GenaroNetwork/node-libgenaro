@@ -985,7 +985,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 	file_path = u_p.get();
 #endif
 
-	FILE *fd = fopen(file_path, "r");
+	FILE *fd = fopen(file_path, "rb");
 
 	if (!fd)
 	{
@@ -1394,7 +1394,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 
 	const char *temp_file_name = str_concat_many(2, file_path_dup, ".genarotmp");
 
-	fd = fopen(temp_file_name, "w+");
+	fd = fopen(temp_file_name, "wb+");
 
 	if (fd == NULL)
 	{
@@ -1615,7 +1615,7 @@ void EncryptMetaToFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 
 	bool ret = false;
 	if (encrypted_meta) {
-		FILE *fd = fopen(file_path, "w+");
+		FILE *fd = fopen(file_path, "wb+");
 		if(fd) {
 			fwrite(encrypted_meta, strlen(encrypted_meta), sizeof(char), fd);
 			fclose(fd);
@@ -1682,7 +1682,7 @@ void DecryptMetaFromFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 #endif
 
 	FILE *fp;
-    fp = fopen(file_path, "r");
+    fp = fopen(file_path, "rb");
     if (fp == NULL) {
 		return;
     }
