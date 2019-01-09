@@ -923,6 +923,12 @@ void StoreFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 	if(is_file_path)
 	{
 		file_path = file_or_data;
+
+		//convert to ANSI encoding on Windows
+		#if defined(_WIN32)
+			std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
+			file_path = u_p.get();
+		#endif
 	}
 	else
 	{
@@ -978,12 +984,6 @@ void StoreFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 		close(fd);
 		file_path = temp_file_path;
 	}
-
-	//convert to ANSI encoding on Win32, add on 2018.5.9
-#if defined(_WIN32)
-	std::unique_ptr<char[]> u_p = EncodingConvert(file_path, CP_UTF8, CP_ACP);
-	file_path = u_p.get();
-#endif
 
 	FILE *fd = fopen(file_path, "rb");
 
