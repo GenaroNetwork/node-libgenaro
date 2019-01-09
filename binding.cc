@@ -408,7 +408,7 @@ void ListFilesCallback(uv_work_t *work_req, int status)
 			file->Set(Nan::New("size").ToLocalChecked(), Nan::New((double)(req->files[i].size)));
 			file->Set(Nan::New("created").ToLocalChecked(), StrToDate(req->files[i].created));
 
-			if(req->files[i].rsaKey && req->files[i].rsaCtr)
+			if (req->files[i].rsaKey && req->files[i].rsaCtr)
 			{
 				file->Set(Nan::New("rsaKey").ToLocalChecked(), Nan::New(req->files[i].rsaKey).ToLocalChecked());
 				file->Set(Nan::New("rsaCtr").ToLocalChecked(), Nan::New(req->files[i].rsaCtr).ToLocalChecked());
@@ -920,7 +920,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 
 	const char *file_path = NULL;
 
-	if(is_file_path)
+	if (is_file_path)
 	{
 		file_path = file_or_data;
 
@@ -956,7 +956,7 @@ void StoreFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 		int fd = -1;
 	#ifdef _WIN32
 		int err = _mktemp_s(temp_file_path, strlen(temp_file_path) + 1);
-		if(!err)
+		if (!err)
 		{
 			fd = open(temp_file_path, O_WRONLY | O_CREAT);
 		}
@@ -964,13 +964,13 @@ void StoreFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 		fd = mkstemp(temp_file_path);
 	#endif
 
-		if(fd == -1)
+		if (fd == -1)
 		{
 			return Nan::ThrowError("Create temp file failed");
 		}
 
 		size_t len = strlen(file_or_data);
-		if(write(fd, file_or_data, len) != 
+		if (write(fd, file_or_data, len) != 
 		#ifdef _WIN32
 			(int)len
 		#else
@@ -1118,7 +1118,7 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 
 	RemoveDownloadingTask(file_name);
 
-	if(fd) {
+	if (fd) {
 		fclose(fd);
 	}
 
@@ -1192,7 +1192,7 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 		if (!getname_failed)
 		{
 			rename_failed = rename(temp_file_name, final_file_name);
-			if(rename_failed)
+			if (rename_failed)
 			{
 				unlink(temp_file_name);
 			}
@@ -1226,7 +1226,7 @@ void ResolveFileFinishedCallback(int status, const char *file_name, const char *
 	}
 
 	v8::Local<v8::Value> error = Nan::Null();
-	if(rename_failed)
+	if (rename_failed)
 	{
 		v8::Local<v8::String> msg = Nan::New("File rename error").ToLocalChecked();
 		error = Nan::Error(msg);
@@ -1308,12 +1308,12 @@ void ResolveFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 	const char *ctr = NULL;
 	const char *key_dup = NULL;
 	const char *ctr_dup = NULL;
-	if(hasKey && hasCtr)
+	if (hasKey && hasCtr)
 	{
 		Nan::Utf8String key_str(options->Get(Nan::New("key").ToLocalChecked()));
 		key = *key_str;
 
-		if(key && key[0] != '\0')
+		if (key && key[0] != '\0')
 		{
 			key_dup = strdup(key);
 		}
@@ -1321,7 +1321,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 		Nan::Utf8String ctr_str(options->Get(Nan::New("ctr").ToLocalChecked()));
 		ctr = *ctr_str;
 
-		if(ctr && ctr[0] != '\0')
+		if (ctr && ctr[0] != '\0')
 		{
 			ctr_dup = strdup(ctr);
 		}
@@ -1329,7 +1329,7 @@ void ResolveFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 
 	genaro_key_ctr_as_str_t *key_ctr_as_str = NULL;
 
-	if(key_dup && ctr_dup)
+	if (key_dup && ctr_dup)
 	{
 		key_ctr_as_str = (genaro_key_ctr_as_str_t *)malloc(sizeof(genaro_key_ctr_as_str_t));
 		key_ctr_as_str->key_as_str = key_dup;
@@ -1493,7 +1493,7 @@ void DecryptFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 	char *decryptedMeta = genaro_decrypt_file(env, file_path, key_ctr_as_str);
 	free((void *)key_ctr_as_str);
 
-	if(!decryptedMeta) {
+	if (!decryptedMeta) {
 		return;
 	}
 
@@ -1616,7 +1616,7 @@ void EncryptMetaToFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 	bool ret = false;
 	if (encrypted_meta) {
 		FILE *fd = fopen(file_path, "wb+");
-		if(fd) {
+		if (fd) {
 			fwrite(encrypted_meta, strlen(encrypted_meta), sizeof(char), fd);
 			fclose(fd);
 			ret = true;
@@ -1715,7 +1715,7 @@ void DecryptMetaFromFile(const Nan::FunctionCallbackInfo<v8::Value> &args)
 	char *decrypted_meta = genaro_decrypt_meta(env, buffer);
 	free(buffer);
 
-	if(decrypted_meta) {
+	if (decrypted_meta) {
 		args.GetReturnValue().Set(Nan::New(decrypted_meta).ToLocalChecked());
 	}
 }
